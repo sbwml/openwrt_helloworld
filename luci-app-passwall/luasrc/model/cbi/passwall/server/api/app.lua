@@ -112,7 +112,7 @@ local function start()
                     end
                 end
                 bin = ln_run("/usr/bin/microsocks", "microsocks_" .. id, string.format("-i :: -p %s %s", port, auth), log_path)
-            elseif type == "SS" or type == "SS-Rust" or type == "SSR" then
+            elseif type == "SS" or type == "SSR" then
                 config = require(require_dir .. "shadowsocks").gen_config(user)
                 local udp_param = ""
                 udp_forward = tonumber(user.udp_forward) or 1
@@ -120,12 +120,7 @@ local function start()
                     udp_param = "-u"
                 end
                 type = type:lower()
-                --bin = ln_run("/usr/bin/" .. type .. "-server", type .. "-server", "-c " .. config_file .. " " .. udp_param, log_path)
-                if type == "ss-rust" then
-                    bin = ln_run("/usr/bin/" .. "ssserver", "ssserver", "-c " .. config_file)
-                else
-                    bin = ln_run("/usr/bin/" .. type .. "-server", type .. "-server", "-c " .. config_file .. " " .. udp_param, log_path)
-                end
+                bin = ln_run("/usr/bin/" .. type .. "-server", type .. "-server", "-c " .. config_file .. " " .. udp_param, log_path)
             elseif type == "V2ray" then
                 config = require(require_dir .. "v2ray").gen_config(user)
                 bin = ln_run(api.get_v2ray_path(), "v2ray", "run -c " .. config_file, log_path)
