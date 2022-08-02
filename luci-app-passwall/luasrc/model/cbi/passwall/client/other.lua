@@ -97,7 +97,7 @@ o:value("53", "DNS")
 
 if os.execute("lsmod | grep -i REDIRECT >/dev/null") == 0 and os.execute("lsmod | grep -i TPROXY >/dev/null") == 0 then
     o = s:option(ListValue, "tcp_proxy_way", translate("TCP Proxy Way"))
-    o.default = "redirect"
+    o.default = "tproxy"
     o:value("redirect", "REDIRECT")
     o:value("tproxy", "TPROXY")
     o:depends("ipv6_tproxy", false)
