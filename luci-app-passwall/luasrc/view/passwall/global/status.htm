@@ -1,5 +1,11 @@
 <%
 local api = require "luci.model.cbi.passwall.api.api"
+local fs = require "nixio.fs"
+local uci = require 'luci.model.uci'.cursor()
+local mode = 'normal'
+if fs.access('/etc/config/argon') then
+	mode = uci:get_first('argon', 'global', 'mode')
+end
 -%>
 
 <style>
@@ -60,8 +66,22 @@ https://github.com/pure-css/pure/blob/master/LICENSE.md
 			background-image: none;
 			background-color: #1e1e1e;
 		}
+		.block.pure-g {
+			background: #2d2d2d;
+			box-shadow: unset;
+		}
 	}
-	
+	<% if mode == 'dark' then %>
+		.block h4 {
+			background-image: none;
+			background-color: #1e1e1e;
+		}
+		.block.pure-g {
+			background: #2d2d2d;
+			box-shadow: unset;
+		}
+	<% end -%>
+
 	.check {
 		cursor: pointer;
 	}
