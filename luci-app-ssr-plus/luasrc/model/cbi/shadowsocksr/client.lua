@@ -4,6 +4,7 @@
 
 local m, s, sec, o
 local uci = luci.model.uci.cursor()
+
 m = Map("shadowsocksr", translate("ShadowSocksR Plus+ Settings"))
 m:section(SimpleSection).template = "shadowsocksr/status"
 
