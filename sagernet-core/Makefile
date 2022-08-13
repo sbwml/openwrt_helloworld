@@ -45,14 +45,6 @@ define Package/sagernet-core
   CONFLICTS:=v2ray-core xray-core
 endef
 
-define Package/sagernet-example
-  $(call Package/sagernet/template)
-  TITLE+= (example configs)
-  DEPENDS:=sagernet-core
-  CONFLICTS:=v2ray-example
-  PKGARCH:=all
-endef
-
 define Package/sagernet-extra
   $(call Package/sagernet/template)
   TITLE+= (extra resources)
@@ -72,21 +64,10 @@ define Package/sagernet-core/description
   This is a v2ray-core fork for SagerNet.
 endef
 
-define Package/sagernet-example/description
-  $(call Package/sagernet/description)
-
-  This includes example configuration files for sagernet-core.
-endef
-
 define Package/sagernet-extra/description
   $(call Package/sagernet/description)
 
   This includes extra resources for sagernet-core.
-endef
-
-define Package/sagernet-core/conffiles
-/etc/config/v2ray
-/etc/v2ray/
 endef
 
 LIBCORE_NAME:=LibSagerNetCore
@@ -119,20 +100,6 @@ define Package/sagernet-core/install
 	$(INSTALL_DIR) $(1)/usr/bin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/main $(1)/usr/bin/v2ray
 	$(LN) v2ray $(1)/usr/bin/xray
-
-	$(INSTALL_DIR) $(1)/etc/v2ray/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/release/config/config.json $(1)/etc/v2ray/
-
-	$(INSTALL_DIR) $(1)/etc/config/
-	$(INSTALL_CONF) $(CURDIR)/files/v2ray.conf $(1)/etc/config/v2ray
-	$(INSTALL_DIR) $(1)/etc/init.d/
-	$(INSTALL_BIN) $(CURDIR)/files/v2ray.init $(1)/etc/init.d/v2ray
-endef
-
-define Package/sagernet-example/install
-	$(INSTALL_DIR) $(1)/etc/v2ray/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/release/config/vpoint_socks_vmess.json $(1)/etc/v2ray/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/release/config/vpoint_vmess_freedom.json $(1)/etc/v2ray/
 endef
 
 define Package/sagernet-extra/install
@@ -142,5 +109,4 @@ endef
 
 $(eval $(call Download,libcore))
 $(eval $(call BuildPackage,sagernet-core))
-$(eval $(call BuildPackage,sagernet-example))
 $(eval $(call BuildPackage,sagernet-extra))
