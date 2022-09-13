@@ -181,7 +181,7 @@ local function start()
 end
 
 local function stop()
-    cmd(string.format("/bin/top -bn1 | grep -v 'grep' | grep '%s/' | awk '{print $1}' | xargs kill -9 >/dev/null 2>&1", CONFIG_PATH))
+    cmd(string.format("/bin/busybox top -bn1 | grep -v 'grep' | grep '%s/' | awk '{print $1}' | xargs kill -9 >/dev/null 2>&1", CONFIG_PATH))
     ipt("-D INPUT -j PSW-SERVER 2>/dev/null")
     ipt("-F PSW-SERVER 2>/dev/null")
     ipt("-X PSW-SERVER 2>/dev/null")
