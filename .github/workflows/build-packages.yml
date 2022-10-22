@@ -73,3 +73,8 @@ jobs:
           server-dir: ${{ matrix.tag }}/${{ matrix.arch }}/
           local-dir: bin/packages/${{ matrix.arch }}/packages_ci/
           dangerous-clean-slate: true
+
+      - name: Create metadata
+        run: |
+          sshpass -p ${{ secrets.server_password }} ssh -o StrictHostKeyChecking=no root@${{ secrets.ftp_address }} >/dev/null 2>&1
+          sshpass -p ${{ secrets.server_password }} ssh root@${{ secrets.ftp_address }} "/opt/sbin/opkg"
