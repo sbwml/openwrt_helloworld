@@ -890,7 +890,7 @@ stop() {
 	( \
 		# Graceful kill first, so programs have the chance to stop its subprocesses
 		$PS -w | grep -v "grep" | grep "$TMP_PATH" | awk '{print $1}' | xargs kill >/dev/null 2>&1 ; \
-		sleep 3s; \
+		sleep 1s; \
 		# Force kill hanged programs
 		$PS -w | grep -v "grep" | grep "$TMP_PATH" | awk '{print $1}' | xargs kill -9 >/dev/null 2>&1 ; \
 	)
