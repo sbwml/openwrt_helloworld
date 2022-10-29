@@ -32,7 +32,7 @@ LUCI_PKGARCH:=all
 LUCI_DEPENDS:= \
 	@(PACKAGE_libustream-mbedtls||PACKAGE_libustream-openssl||PACKAGE_libustream-wolfssl) \
 	+coreutils +coreutils-base64 +dns2socks +dns2tcp +ipset +kmod-ipt-nat \
-	+ip-full +iptables +iptables-mod-tproxy +lua +lua-neturl +libuci-lua +microsocks \
+	+ip-full +iptables +iptables-mod-tproxy +lua +lua-neturl +libuci-lua +luci-lib-ipkg +microsocks \
 	+tcping +resolveip +shadowsocksr-libev-ssr-check +uclient-fetch \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_V2ray:curl \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_V2ray:v2ray-core \
@@ -59,7 +59,6 @@ LUCI_DEPENDS:= \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_Trojan:trojan
 
 define Package/$(PKG_NAME)/config
-select PACKAGE_luci-lib-ipkg if PACKAGE_$(PKG_NAME)
 select PACKAGE_dnsmasq-full if PACKAGE_$(PKG_NAME)
 
 choice
