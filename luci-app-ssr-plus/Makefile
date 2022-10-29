@@ -63,7 +63,7 @@ select PACKAGE_dnsmasq-full if PACKAGE_$(PKG_NAME)
 
 choice
 	prompt "Shadowsocks Client Selection"
-	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Client if aarch64
+	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Client if aarch64||arm||i386||mips||mipsel||x86_64
 	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Libev_Client
 
 	config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_NONE_Client
@@ -80,8 +80,8 @@ endchoice
 
 choice
 	prompt "Shadowsocks Server Selection"
-	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Server if aarch64
-	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Libev_Server if i386||x86_64||arm
+	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Server if aarch64||arm||i386||mips||mipsel||x86_64
+	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Libev_Server
 	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_NONE_Server
 
 	config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_NONE_Server
