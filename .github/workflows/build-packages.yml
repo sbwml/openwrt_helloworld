@@ -65,7 +65,7 @@ jobs:
           path: bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
 
       - name: Upload FTP
-        uses: SamKirkland/FTP-Deploy-Action@4.3.2
+        uses: sbwml/FTP-Deploy-Action@master
         with:
           server: ${{ secrets.ftp_address }}
           username: ${{ secrets.ftp_username }}
