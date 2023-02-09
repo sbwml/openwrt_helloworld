@@ -147,7 +147,7 @@ o.rawhtml = true
 o.template = "shadowsocksr/ssrurl"
 o.value = sid
 
-o = s:option(ListValue, "type", translate("Server Node Type"))
+o = s:option(Value, "type", translate("Server Node Type"))
 if is_finded("xray") or is_finded("v2ray") then
 	o:value("v2ray", translate("V2Ray/XRay"))
 end
@@ -718,7 +718,14 @@ if is_finded("xray") then
 	o:value("", translate("disable"))
 	o:value("firefox", translate("firefox"))
 	o:value("chrome", translate("chrome"))
+	o:value("firefox", translate("firefox"))
 	o:value("safari", translate("safari"))
+	o:value("ios", translate("ios"))
+	o:value("android", translate("android"))
+	o:value("edge", translate("edge"))
+	o:value("360", translate("360"))
+	o:value("qq", translate("qq"))
+	o:value("random", translate("random"))
 	o:value("randomized", translate("randomized"))
 	o:depends({type = "v2ray", tls = true})
 	o:depends({type = "v2ray", xtls = true})
