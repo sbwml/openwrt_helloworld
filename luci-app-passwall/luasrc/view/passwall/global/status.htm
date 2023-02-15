@@ -1,5 +1,5 @@
 <%
-local api = require "luci.model.cbi.passwall.api.api"
+local api = require "luci.passwall.api"
 local fs = require "nixio.fs"
 local uci = require 'luci.model.uci'.cursor()
 local mode = 'normal'
@@ -64,10 +64,10 @@ https://github.com/pure-css/pure/blob/master/LICENSE.md
 	@media (prefers-color-scheme: dark) {
 		.block h4 {
 			background-image: none;
-			background-color: #1e1e1e;
+			background-color: #131b33;
 		}
 		.block.pure-g {
-			background: #2d2d2d;
+			background: #0a0f17;
 			box-shadow: unset;
 		}
 	}
