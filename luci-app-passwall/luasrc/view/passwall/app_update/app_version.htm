@@ -177,12 +177,10 @@ local version = {}
 <div class="cbi-value">
 	<label class="cbi-value-title">Passwall <%:Version%></label>
 	<div class="cbi-value-field">
-		<div class="cbi-value-description">
-			<span>【 <%=api.get_version()%> 】</span>
-			<input class="btn cbi-button cbi-button-apply" type="button" id="passwall-check_btn"
-				onclick="onBtnClick(this,'passwall');" value="<%:Manually update%>" />
-			<span id="passwall-check_btn-detail"></span>
-		</div>
+		<span>【 <%=api.get_version()%> 】</span>
+		<input class="btn cbi-button cbi-button-apply" type="button" id="passwall-check_btn"
+			onclick="onBtnClick(this,'passwall');" value="<%:Manually update%>" />
+		<span id="passwall-check_btn-detail"></span>
 	</div>
 </div>
 
@@ -193,12 +191,10 @@ local version = {}
 		<%:Version%>
 	</label>
 	<div class="cbi-value-field">
-		<div class="cbi-value-description">
-			<span>【 <%=version[k] ~="" and version[k] or translate("Null") %> 】</span>
-			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn"
-				onclick="onBtnClick(this,'<%=k%>');" value="<%:Manually update%>" />
-			<span id="_<%=k%>-check_btn-detail"></span>
-		</div>
+		<span>【 <%=version[k] ~="" and version[k] or translate("Null") %> 】</span>
+		<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn"
+			onclick="onBtnClick(this,'<%=k%>');" value="<%:Manually update%>" />
+		<span id="_<%=k%>-check_btn-detail"></span>
 	</div>
 </div>
 <%end%>
