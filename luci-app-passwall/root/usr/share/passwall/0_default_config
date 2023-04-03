@@ -93,6 +93,7 @@ config nodes 'myshunt'
 	option BT '_direct'
 	option Telegram 'nil'
 	option Netflix 'nil'
+	option openai 'nil'
 	option TVB 'nil'
 	option Cloudflare 'nil'
 	option Github 'nil'
@@ -200,6 +201,10 @@ netflixdnstest8.com
 netflixdnstest9.com
 netflixdnstest10.com'
 	option ip_list 'geoip:netflix'
+	
+config shunt_rules 'openai'
+	option remarks 'openai'
+	option domain_list 'openai.com'
 
 config shunt_rules 'TVB'
 	option remarks 'TVB'
