@@ -50,7 +50,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build Packages
-        uses: sbwml/openwrt-gh-action-sdk@openwrt_helloworld
+        uses: sbwml/openwrt-gh-action-sdk@helloworld
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.tag }}
           FEEDNAME: packages_ci
