@@ -994,7 +994,6 @@ reset() {
 		add shadowsocksr access_control
 		set shadowsocksr.@access_control[0].lan_ac_mode='0'
 		set shadowsocksr.@access_control[0].router_proxy='1'
-		add_list shadowsocksr.@access_control[0].wan_bp_ips=34.149.0.0/16
 		add_list shadowsocksr.@access_control[0].wan_fw_ips=149.154.160.0/20
 		add_list shadowsocksr.@access_control[0].wan_fw_ips=67.198.55.0/24
 		add_list shadowsocksr.@access_control[0].wan_fw_ips=91.108.4.0/22
