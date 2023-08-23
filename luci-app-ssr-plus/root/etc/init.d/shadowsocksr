@@ -769,15 +769,17 @@ start_server() {
 			;;
 		esac
 		ssr_server_port=$(uci show shadowsocksr | grep 'server_config.*server_port' | awk -F"'" '{print $2}' | tr "\n" " ")
-		uci -q delete firewall.shadowsocksr_server
-		uci set firewall.shadowsocksr_server=rule
-		uci set firewall.shadowsocksr_server.name="shadowsocksr_server"
-		uci set firewall.shadowsocksr_server.target="ACCEPT"
-		uci set firewall.shadowsocksr_server.src="wan"
-		uci set firewall.shadowsocksr_server.dest_port="$ssr_server_port"
-		uci set firewall.shadowsocksr_server.enabled="1"
-		uci commit firewall
-		/etc/init.d/firewall reload >/dev/null 2>&1
+		if [ -n "$ssr_server_port" ]; then
+			uci -q delete firewall.shadowsocksr_server
+			uci set firewall.shadowsocksr_server=rule
+			uci set firewall.shadowsocksr_server.name="shadowsocksr_server"
+			uci set firewall.shadowsocksr_server.target="ACCEPT"
+			uci set firewall.shadowsocksr_server.src="wan"
+			uci set firewall.shadowsocksr_server.dest_port="$ssr_server_port"
+			uci set firewall.shadowsocksr_server.enabled="1"
+			uci commit firewall
+			/etc/init.d/firewall reload >/dev/null 2>&1
+		fi
 		return 0
 	}
 
