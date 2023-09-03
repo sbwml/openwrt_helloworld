@@ -16,7 +16,7 @@ function index()
 	entry({"admin", "services", appname, "hide"}, call("hide_menu")).leaf = true
 	if not nixio.fs.access("/etc/config/passwall2") then return end
 	if nixio.fs.access("/etc/config/passwall2_show") then
-		e = entry({"admin", "services", appname}, alias("admin", "services", appname, "settings"), _("PassWall 2"), 0)
+		e = entry({"admin", "services", appname}, alias("admin", "services", appname, "settings"), _("PassWall 2"), -1)
 		e.dependent = true
 		e.acl_depends = { "luci-app-passwall2" }
 	end
