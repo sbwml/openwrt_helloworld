@@ -2,13 +2,15 @@ local m, s = ...
 
 local api = require "luci.passwall2.api"
 
-if not api.is_finded("xray") then
+if not api.is_finded("sing-box")then
 	return
 end
 
-local type_name = "Xray"
+local singbox_tags = luci.sys.exec(api.finded("sing-box") .. " version  | grep 'Tags:' | awk '{print $2}'")
 
-local option_prefix = "xray_"
+local type_name = "sing-box"
+
+local option_prefix = "singbox_"
 
 local function option_name(name)
 	return option_prefix .. name
@@ -34,26 +36,34 @@ local function rm_prefix_remove(self, section, value)
 	end
 end
 
-local x_ss_method_list = {
-	"aes-128-gcm", "aes-256-gcm", "chacha20-poly1305", "xchacha20-poly1305", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305"
+local ss_method_list = {
+	"none", "aes-128-gcm", "aes-192-gcm", "aes-256-gcm", "chacha20-ietf-poly1305", "xchacha20-ietf-poly1305",
+	"2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305"
 }
 
-local header_type_list = {
-	"none", "srtp", "utp", "wechat-video", "dtls", "wireguard"
-}
+-- [[ Sing-Box ]]
 
--- [[ Xray ]]
-
-s.fields["type"]:value(type_name, "Xray")
+s.fields["type"]:value(type_name, "Sing-Box")
 
 o = s:option(ListValue, option_name("protocol"), translate("Protocol"))
+o:value("mixed", "Mixed")
+o:value("socks", "Socks")
+o:value("http", "HTTP")
+o:value("shadowsocks", "Shadowsocks")
 o:value("vmess", "Vmess")
 o:value("vless", "VLESS")
-o:value("http", "HTTP")
-o:value("socks", "Socks")
-o:value("shadowsocks", "Shadowsocks")
 o:value("trojan", "Trojan")
-o:value("dokodemo-door", "dokodemo-door")
+o:value("naive", "Naive")
+if singbox_tags:find("with_quic") then
+	o:value("hysteria", "Hysteria")
+end
+if singbox_tags:find("with_quic") then
+	o:value("tuic", "TUIC")
+end
+if singbox_tags:find("with_quic") then
+	o:value("hysteria2", "Hysteria2")
+end
+o:value("direct", "Direct")
 
 o = s:option(Value, option_name("port"), translate("Listen Port"))
 o.datatype = "port"
@@ -69,61 +79,129 @@ o.validate = function(self, value, t)
 	end
 	return value
 end
+o:depends({ [option_name("protocol")] = "mixed" })
 o:depends({ [option_name("protocol")] = "socks" })
 o:depends({ [option_name("protocol")] = "http" })
 
 o = s:option(Value, option_name("username"), translate("Username"))
 o:depends({ [option_name("auth")] = true })
+o:depends({ [option_name("protocol")] = "naive" })
 
 o = s:option(Value, option_name("password"), translate("Password"))
 o.password = true
 o:depends({ [option_name("auth")] = true })
 o:depends({ [option_name("protocol")] = "shadowsocks" })
+o:depends({ [option_name("protocol")] = "naive" })
+o:depends({ [option_name("protocol")] = "tuic" })
+
+if singbox_tags:find("with_quic") then
+	o = s:option(Value, option_name("hysteria_up_mbps"), translate("Max upload Mbps"))
+	o.default = "100"
+	o:depends({ [option_name("protocol")] = "hysteria" })
+
+	o = s:option(Value, option_name("hysteria_down_mbps"), translate("Max download Mbps"))
+	o.default = "100"
+	o:depends({ [option_name("protocol")] = "hysteria" })
+
+	o = s:option(Value, option_name("hysteria_obfs"), translate("Obfs Password"))
+	o:depends({ [option_name("protocol")] = "hysteria" })
+
+	o = s:option(ListValue, option_name("hysteria_auth_type"), translate("Auth Type"))
+	o:value("disable", translate("Disable"))
+	o:value("string", translate("STRING"))
+	o:value("base64", translate("BASE64"))
+	o:depends({ [option_name("protocol")] = "hysteria" })
+
+	o = s:option(Value, option_name("hysteria_auth_password"), translate("Auth Password"))
+	o.password = true
+	o:depends({ [option_name("protocol")] = "hysteria", [option_name("hysteria_auth_type")] = "string"})
+	o:depends({ [option_name("protocol")] = "hysteria", [option_name("hysteria_auth_type")] = "base64"})
+
+	o = s:option(Value, option_name("hysteria_recv_window_conn"), translate("QUIC stream receive window"))
+	o:depends({ [option_name("protocol")] = "hysteria" })
+
+	o = s:option(Value, option_name("hysteria_recv_window_client"), translate("QUIC connection receive window"))
+	o:depends({ [option_name("protocol")] = "hysteria" })
+
+	o = s:option(Value, option_name("hysteria_max_conn_client"), translate("QUIC concurrent bidirectional streams"))
+	o.default = "1024"
+	o:depends({ [option_name("protocol")] = "hysteria" })
+
+	o = s:option(Flag, option_name("hysteria_disable_mtu_discovery"), translate("Disable MTU detection"))
+	o:depends({ [option_name("protocol")] = "hysteria" })
+end
+
+if singbox_tags:find("with_quic") then
+	o = s:option(ListValue, option_name("tuic_congestion_control"), translate("Congestion control algorithm"))
+	o.default = "cubic"
+	o:value("bbr", translate("BBR"))
+	o:value("cubic", translate("CUBIC"))
+	o:value("new_reno", translate("New Reno"))
+	o:depends({ [option_name("protocol")] = "tuic" })
+
+	o = s:option(Flag, option_name("tuic_zero_rtt_handshake"), translate("Enable 0-RTT QUIC handshake"))
+	o.default = 0
+	o:depends({ [option_name("protocol")] = "tuic" })
+
+	o = s:option(Value, option_name("tuic_heartbeat"), translate("Heartbeat interval(second)"))
+	o.datatype = "uinteger"
+	o.default = "3"
+	o:depends({ [option_name("protocol")] = "tuic" })
+end
+
+if singbox_tags:find("with_quic") then
+	o = s:option(Flag, option_name("hysteria2_ignore_client_bandwidth"), translate("Commands the client to use the BBR flow control algorithm"))
+	o.default = 0
+	o:depends({ [option_name("protocol")] = "hysteria2" })
+
+	o = s:option(Value, option_name("hysteria2_up_mbps"), translate("Max upload Mbps"))
+	o:depends({ [option_name("protocol")] = "hysteria2", [option_name("hysteria2_ignore_client_bandwidth")] = false })
+
+	o = s:option(Value, option_name("hysteria2_down_mbps"), translate("Max download Mbps"))
+	o:depends({ [option_name("protocol")] = "hysteria2", [option_name("hysteria2_ignore_client_bandwidth")] = false })
+
+	o = s:option(ListValue, option_name("hysteria2_obfs_type"), translate("Obfs Type"))
+	o:value("", translate("Disable"))
+	o:value("salamander")
+	o:depends({ [option_name("protocol")] = "hysteria2" })
+
+	o = s:option(Value, option_name("hysteria2_obfs_password"), translate("Obfs Password"))
+	o:depends({ [option_name("protocol")] = "hysteria2" })
+
+	o = s:option(Value, option_name("hysteria2_auth_password"), translate("Auth Password"))
+	o.password = true
+	o:depends({ [option_name("protocol")] = "hysteria2"})
+end
 
 o = s:option(ListValue, option_name("d_protocol"), translate("Destination protocol"))
 o:value("tcp", "TCP")
 o:value("udp", "UDP")
 o:value("tcp,udp", "TCP,UDP")
-o:depends({ [option_name("protocol")] = "dokodemo-door" })
+o:depends({ [option_name("protocol")] = "direct" })
 
 o = s:option(Value, option_name("d_address"), translate("Destination address"))
-o:depends({ [option_name("protocol")] = "dokodemo-door" })
+o:depends({ [option_name("protocol")] = "direct" })
 
 o = s:option(Value, option_name("d_port"), translate("Destination port"))
 o.datatype = "port"
-o:depends({ [option_name("protocol")] = "dokodemo-door" })
+o:depends({ [option_name("protocol")] = "direct" })
 
 o = s:option(Value, option_name("decryption"), translate("Encrypt Method"))
 o.default = "none"
 o:depends({ [option_name("protocol")] = "vless" })
 
-o = s:option(ListValue, option_name("x_ss_method"), translate("Encrypt Method"))
+o = s:option(ListValue, option_name("ss_method"), translate("Encrypt Method"))
 o.not_rewrite = true
-for a, t in ipairs(x_ss_method_list) do o:value(t) end
+for a, t in ipairs(ss_method_list) do o:value(t) end
 o:depends({ [option_name("protocol")] = "shadowsocks" })
 function o.cfgvalue(self, section)
 	return m:get(section, "method")
 end
 function o.write(self, section, value)
-	if s.fields["type"]:formvalue(arg[1]) == "Xray" then
+	if s.fields["type"]:formvalue(arg[1]) == type_name then
 		m:set(section, "method", value)
 	end
 end
-
-o = s:option(Flag, option_name("iv_check"), translate("IV Check"))
-o:depends({ [option_name("protocol")] = "shadowsocks" })
-
-o = s:option(ListValue, option_name("ss_network"), translate("Transport"))
-o.default = "tcp,udp"
-o:value("tcp", "TCP")
-o:value("udp", "UDP")
-o:value("tcp,udp", "TCP,UDP")
-o:depends({ [option_name("protocol")] = "shadowsocks" })
-
-o = s:option(Flag, option_name("udp_forward"), translate("UDP Forward"))
-o.default = "1"
-o.rmempty = false
-o:depends({ [option_name("protocol")] = "socks" })
 
 o = s:option(DynamicList, option_name("uuid"), translate("ID") .. "/" .. translate("Password"))
 for i = 1, 3 do
@@ -132,6 +210,7 @@ end
 o:depends({ [option_name("protocol")] = "vmess" })
 o:depends({ [option_name("protocol")] = "vless" })
 o:depends({ [option_name("protocol")] = "trojan" })
+o:depends({ [option_name("protocol")] = "tuic" })
 
 o = s:option(ListValue, option_name("flow"), translate("flow"))
 o.default = ""
@@ -153,23 +232,11 @@ o.validate = function(self, value, t)
 		return value
 	end
 end
+o:depends({ [option_name("protocol")] = "http" })
+o:depends({ [option_name("protocol")] = "shadowsocks" })
 o:depends({ [option_name("protocol")] = "vmess" })
 o:depends({ [option_name("protocol")] = "vless" })
-o:depends({ [option_name("protocol")] = "socks" })
-o:depends({ [option_name("protocol")] = "shadowsocks" })
 o:depends({ [option_name("protocol")] = "trojan" })
-
-o = s:option(ListValue, option_name("alpn"), translate("alpn"))
-o.default = "h2,http/1.1"
-o:value("h2,http/1.1")
-o:value("h2")
-o:value("http/1.1")
-o:depends({ [option_name("tls")] = true })
-
--- o = s:option(Value, option_name("minversion"), translate("minversion"))
--- o.default = "1.3"
--- o:value("1.3")
---o:depends({ [option_name("tls")] = true })
 
 -- [[ TLS部分 ]] --
 
@@ -203,17 +270,22 @@ end
 
 o = s:option(ListValue, option_name("transport"), translate("Transport"))
 o:value("tcp", "TCP")
-o:value("mkcp", "mKCP")
+o:value("http", "HTTP")
 o:value("ws", "WebSocket")
-o:value("h2", "HTTP/2")
-o:value("ds", "DomainSocket")
 o:value("quic", "QUIC")
 o:value("grpc", "gRPC")
+o:depends({ [option_name("protocol")] = "shadowsocks" })
 o:depends({ [option_name("protocol")] = "vmess" })
 o:depends({ [option_name("protocol")] = "vless" })
-o:depends({ [option_name("protocol")] = "socks" })
-o:depends({ [option_name("protocol")] = "shadowsocks" })
 o:depends({ [option_name("protocol")] = "trojan" })
+
+-- [[ HTTP部分 ]]--
+
+o = s:option(Value, option_name("http_host"), translate("HTTP Host"))
+o:depends({ [option_name("transport")] = "http" })
+
+o = s:option(Value, option_name("http_path"), translate("HTTP Path"))
+o:depends({ [option_name("transport")] = "http" })
 
 -- [[ WebSocket部分 ]]--
 
@@ -223,115 +295,9 @@ o:depends({ [option_name("transport")] = "ws" })
 o = s:option(Value, option_name("ws_path"), translate("WebSocket Path"))
 o:depends({ [option_name("transport")] = "ws" })
 
--- [[ HTTP/2部分 ]]--
-
-o = s:option(Value, option_name("h2_host"), translate("HTTP/2 Host"))
-o:depends({ [option_name("transport")] = "h2" })
-
-o = s:option(Value, option_name("h2_path"), translate("HTTP/2 Path"))
-o:depends({ [option_name("transport")] = "h2" })
-
--- [[ TCP部分 ]]--
-
--- TCP伪装
-o = s:option(ListValue, option_name("tcp_guise"), translate("Camouflage Type"))
-o:value("none", "none")
-o:value("http", "http")
-o:depends({ [option_name("transport")] = "tcp" })
-
--- HTTP域名
-o = s:option(DynamicList, option_name("tcp_guise_http_host"), translate("HTTP Host"))
-o:depends({ [option_name("tcp_guise")] = "http" })
-
--- HTTP路径
-o = s:option(DynamicList, option_name("tcp_guise_http_path"), translate("HTTP Path"))
-o:depends({ [option_name("tcp_guise")] = "http" })
-
--- [[ mKCP部分 ]]--
-
-o = s:option(ListValue, option_name("mkcp_guise"), translate("Camouflage Type"), translate('<br />none: default, no masquerade, data sent is packets with no characteristics.<br />srtp: disguised as an SRTP packet, it will be recognized as video call data (such as FaceTime).<br />utp: packets disguised as uTP will be recognized as bittorrent downloaded data.<br />wechat-video: packets disguised as WeChat video calls.<br />dtls: disguised as DTLS 1.2 packet.<br />wireguard: disguised as a WireGuard packet. (not really WireGuard protocol)'))
-for a, t in ipairs(header_type_list) do o:value(t) end
-o:depends({ [option_name("transport")] = "mkcp" })
-
-o = s:option(Value, option_name("mkcp_mtu"), translate("KCP MTU"))
-o.default = "1350"
-o:depends({ [option_name("transport")] = "mkcp" })
-
-o = s:option(Value, option_name("mkcp_tti"), translate("KCP TTI"))
-o.default = "20"
-o:depends({ [option_name("transport")] = "mkcp" })
-
-o = s:option(Value, option_name("mkcp_uplinkCapacity"), translate("KCP uplinkCapacity"))
-o.default = "5"
-o:depends({ [option_name("transport")] = "mkcp" })
-
-o = s:option(Value, option_name("mkcp_downlinkCapacity"), translate("KCP downlinkCapacity"))
-o.default = "20"
-o:depends({ [option_name("transport")] = "mkcp" })
-
-o = s:option(Flag, option_name("mkcp_congestion"), translate("KCP Congestion"))
-o:depends({ [option_name("transport")] = "mkcp" })
-
-o = s:option(Value, option_name("mkcp_readBufferSize"), translate("KCP readBufferSize"))
-o.default = "1"
-o:depends({ [option_name("transport")] = "mkcp" })
-
-o = s:option(Value, option_name("mkcp_writeBufferSize"), translate("KCP writeBufferSize"))
-o.default = "1"
-o:depends({ [option_name("transport")] = "mkcp" })
-
-o = s:option(Value, option_name("mkcp_seed"), translate("KCP Seed"))
-o:depends({ [option_name("transport")] = "mkcp" })
-
--- [[ DomainSocket部分 ]]--
-
-o = s:option(Value, option_name("ds_path"), "Path", translate("A legal file path. This file must not exist before running."))
-o:depends({ [option_name("transport")] = "ds" })
-
--- [[ QUIC部分 ]]--
-o = s:option(ListValue, option_name("quic_security"), translate("Encrypt Method"))
-o:value("none")
-o:value("aes-128-gcm")
-o:value("chacha20-poly1305")
-o:depends({ [option_name("transport")] = "quic" })
-
-o = s:option(Value, option_name("quic_key"), translate("Encrypt Method") .. translate("Key"))
-o:depends({ [option_name("transport")] = "quic" })
-
-o = s:option(ListValue, option_name("quic_guise"), translate("Camouflage Type"))
-for a, t in ipairs(header_type_list) do o:value(t) end
-o:depends({ [option_name("transport")] = "quic" })
-
 -- [[ gRPC部分 ]]--
 o = s:option(Value, option_name("grpc_serviceName"), "ServiceName")
 o:depends({ [option_name("transport")] = "grpc" })
-
-o = s:option(Flag, option_name("acceptProxyProtocol"), translate("acceptProxyProtocol"), translate("Whether to receive PROXY protocol, when this node want to be fallback or forwarded by proxy, it must be enable, otherwise it cannot be used."))
-o:depends({ [option_name("transport")] = "tcp" })
-o:depends({ [option_name("transport")] = "ws" })
-
--- [[ Fallback部分 ]]--
-o = s:option(Flag, option_name("fallback"), translate("Fallback"))
-o:depends({ [option_name("protocol")] = "vless", [option_name("transport")] = "tcp" })
-o:depends({ [option_name("protocol")] = "trojan", [option_name("transport")] = "tcp" })
-
---[[
-o = s:option(Value, option_name("fallback_alpn"), "Fallback alpn")
-o:depends({ [option_name("fallback")] = true })
-
-o = s:option(Value, option_name("fallback_path"), "Fallback path")
-o:depends({ [option_name("fallback")] = true })
-
-o = s:option(Value, option_name("fallback_dest"), "Fallback dest")
-o:depends({ [option_name("fallback")] = true })
-
-o = s:option(Value, option_name("fallback_xver"), "Fallback xver")
-o.default = 0
-o:depends({ [option_name("fallback")] = true })
-]]--
-
-o = s:option(DynamicList, option_name("fallback_list"), "Fallback", translate("dest,path"))
-o:depends({ [option_name("fallback")] = true })
 
 o = s:option(Flag, option_name("bind_local"), translate("Bind Local"), translate("When selected, it can only be accessed locally, It is recommended to turn on when using reverse proxies or be fallback."))
 o.default = "0"
@@ -353,41 +319,41 @@ o = s:option(ListValue, option_name("outbound_node"), translate("outbound node")
 o:value("nil", translate("Close"))
 o:value("_socks", translate("Custom Socks"))
 o:value("_http", translate("Custom HTTP"))
-o:value("_iface", translate("Custom Interface") .. " (Only Support Xray)")
+o:value("_iface", translate("Custom Interface"))
 for k, v in pairs(nodes_table) do o:value(v.id, v.remarks) end
 o.default = "nil"
 
 o = s:option(Value, option_name("outbound_node_address"), translate("Address (Support Domain Name)"))
-o:depends({ [option_name("outbound_node")] = "_socks"})
-o:depends({ [option_name("outbound_node")] = "_http"})
+o:depends({ [option_name("outbound_node")] = "_socks" })
+o:depends({ [option_name("outbound_node")] = "_http" })
 
 o = s:option(Value, option_name("outbound_node_port"), translate("Port"))
 o.datatype = "port"
-o:depends({ [option_name("outbound_node")] = "_socks"})
-o:depends({ [option_name("outbound_node")] = "_http"})
+o:depends({ [option_name("outbound_node")] = "_socks" })
+o:depends({ [option_name("outbound_node")] = "_http" })
 
 o = s:option(Value, option_name("outbound_node_username"), translate("Username"))
-o:depends({ [option_name("outbound_node")] = "_socks"})
-o:depends({ [option_name("outbound_node")] = "_http"})
+o:depends({ [option_name("outbound_node")] = "_socks" })
+o:depends({ [option_name("outbound_node")] = "_http" })
 
 o = s:option(Value, option_name("outbound_node_password"), translate("Password"))
 o.password = true
-o:depends({ [option_name("outbound_node")] = "_socks"})
-o:depends({ [option_name("outbound_node")] = "_http"})
+o:depends({ [option_name("outbound_node")] = "_socks" })
+o:depends({ [option_name("outbound_node")] = "_http" })
 
 o = s:option(Value, option_name("outbound_node_iface"), translate("Interface"))
 o.default = "eth1"
-o:depends({ [option_name("outbound_node")] = "_iface"})
+o:depends({ [option_name("outbound_node")] = "_iface" })
 
 o = s:option(Flag, option_name("log"), translate("Log"))
 o.default = "1"
 o.rmempty = false
 
 o = s:option(ListValue, option_name("loglevel"), translate("Log Level"))
-o.default = "warning"
+o.default = "info"
 o:value("debug")
 o:value("info")
-o:value("warning")
+o:value("warn")
 o:value("error")
 o:depends({ [option_name("log")] = true })
 
@@ -398,9 +364,8 @@ for key, value in pairs(s.fields) do
 			s.fields[key].write = rm_prefix_write
 			s.fields[key].remove = rm_prefix_remove
 		end
-	end
 
-	local deps = s.fields[key].deps
+		local deps = s.fields[key].deps
 		if #deps > 0 then
 			for index, value in ipairs(deps) do
 				deps[index]["type"] = type_name
@@ -408,4 +373,5 @@ for key, value in pairs(s.fields) do
 		else
 			s.fields[key]:depends({ type = type_name })
 		end
+	end
 end

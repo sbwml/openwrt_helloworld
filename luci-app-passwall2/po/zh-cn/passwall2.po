@@ -412,6 +412,9 @@ msgstr "传输层插件"
 msgid "Shadowsocks secondary encryption"
 msgstr "Shadowsocks 二次加密"
 
+msgid "Obfs Type"
+msgstr "混淆类型"
+
 msgid "Obfs Password"
 msgstr "混淆密码"
 
@@ -420,6 +423,9 @@ msgstr "认证类型"
 
 msgid "Auth Password"
 msgstr "认证密码"
+
+msgid "Commands the client to use the BBR flow control algorithm"
+msgstr "命令客户端使用 BBR 流量控制算法"
 
 msgid "Max upload Mbps"
 msgstr "最大上行(Mbps)"
@@ -432,6 +438,9 @@ msgstr "QUIC 流接收窗口"
 
 msgid "QUIC connection receive window"
 msgstr "QUIC 连接接收窗口"
+
+msgid "QUIC concurrent bidirectional streams"
+msgstr "QUIC 并发双向流的最大数量"
 
 msgid "Disable MTU detection"
 msgstr "禁用 MTU 检测"
@@ -694,6 +703,9 @@ msgstr "启用自定义规则地址"
 msgid "Rule status"
 msgstr "规则版本"
 
+msgid "Manually update"
+msgstr "手动更新"
+
 msgid "Enable auto update rules"
 msgstr "开启自动更新规则"
 
@@ -946,9 +958,6 @@ msgstr "从文件中加载 IP: 形如'ext:file:tag'，必须以ext:（小写）�
 msgid "Clear logs"
 msgstr "清空日志"
 
-msgid "Only recommend to use with VLESS-TCP-XTLS-Vision."
-msgstr "只推荐与 VLESS-TCP-XTLS-Vision 搭配使用。"
-
 msgid "Password"
 msgstr "密码"
 
@@ -1002,9 +1011,6 @@ msgstr "使用TLS"
 
 msgid "Naiveproxy Protocol"
 msgstr "Naiveproxy协议"
-
-msgid "V2ray Protocol"
-msgstr "V2ray协议"
 
 msgid "User Level"
 msgstr "用户等级(level)"
@@ -1336,8 +1342,14 @@ msgstr "缓冲区大小"
 msgid "Buffer size for every connection (kB)"
 msgstr "每一个连接的缓冲区大小（kB）"
 
+msgid "Custom geoip Path"
+msgstr "自定义geoip文件路径"
+
 msgid "Custom geoip URL"
 msgstr "自定义geoip文件更新链接"
+
+msgid "Custom geosite Path"
+msgstr "自定义geosite文件路径"
 
 msgid "Custom geosite URL"
 msgstr "自定义geosite文件更新链接"
@@ -1353,3 +1365,9 @@ msgstr "端口跳跃时间 "
 
 msgid "Additional ports for hysteria hop"
 msgstr "端口跳跃额外端口"
+
+msgid "Override the connection destination address"
+msgstr "覆盖连接目标地址"
+
+msgid "Override the connection destination address with the sniffed domain."
+msgstr "用探测出的域名覆盖连接目标地址。"

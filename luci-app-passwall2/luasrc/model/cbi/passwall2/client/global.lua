@@ -2,7 +2,7 @@ local api = require "luci.passwall2.api"
 local appname = api.appname
 local uci = api.uci
 local datatypes = api.datatypes
-local has_v2ray = api.is_finded("v2ray")
+local has_singbox = api.is_finded("sing-box")
 local has_xray = api.is_finded("xray")
 
 m = Map(appname)
@@ -36,6 +36,8 @@ end
 
 m:append(Template(appname .. "/global/status"))
 
+local global_cfgid = uci:get_all(appname, "@global[0]")[".name"]
+
 s = m:section(TypedSection, "global")
 s.anonymous = true
 s.addremove = false
@@ -51,7 +53,7 @@ node = s:taboption("Main", ListValue, "node", "<a style='color: red'>" .. transl
 node:value("nil", translate("Close"))
 
 -- 分流
-if (has_v2ray or has_xray) and #nodes_table > 0 then
+if (has_singbox or has_xray) and #nodes_table > 0 then
 	local normal_list = {}
 	local balancing_list = {}
 	local shunt_list = {}
@@ -84,10 +86,10 @@ if (has_v2ray or has_xray) and #nodes_table > 0 then
 	if #normal_list > 0 then
 		for k, v in pairs(shunt_list) do
 			local vid = v.id
-			-- shunt node type, V2ray or Xray
+			-- shunt node type, Sing-Box or Xray
 			local type = s:taboption("Main", ListValue, vid .. "-type", translate("Type"))
-			if has_v2ray then
-				type:value("V2ray", translate("V2ray"))
+			if has_singbox then
+				type:value("sing-box", translate("Sing-Box"))
 			end
 			if has_xray then
 				type:value("Xray", translate("Xray"))
@@ -119,7 +121,7 @@ if (has_v2ray or has_xray) and #nodes_table > 0 then
 			o.cfgvalue = get_cfgvalue(v.id, "main_node")
 			o.write = get_write(v.id, "main_node")
 
-			if (has_v2ray and has_xray) or (v.type == "V2ray" and not has_v2ray) or (v.type == "Xray" and not has_xray) then
+			if (has_singbox and has_xray) or (v.type == "sing-box" and not has_singbox) or (v.type == "Xray" and not has_xray) then
 				type:depends("node", v.id)
 			else
 				type:depends("node", "hide") --不存在的依赖，即始终隐藏
@@ -212,14 +214,6 @@ node_socks_port = s:taboption("Main", Value, "node_socks_port", translate("Node"
 node_socks_port.default = 1070
 node_socks_port.datatype = "port"
 
---[[
-if has_v2ray or has_xray then
-	node_http_port = s:taboption("Main", Value, "node_http_port", translate("Node") .. " HTTP " .. translate("Listen Port") .. " " .. translate("0 is not use"))
-	node_http_port.default = 0
-	node_http_port.datatype = "port"
-end
-]]--
-
 s:tab("DNS", translate("DNS"))
 
 o = s:taboption("DNS", ListValue, "remote_dns_protocol", translate("Remote DNS Protocol"))
@@ -260,8 +254,6 @@ o = s:taboption("DNS", Value, "remote_dns_client_ip", translate("Remote DNS EDNS
 o.description = translate("Notify the DNS server when the DNS query is notified, the location of the client (cannot be a private IP address).") .. "<br />" ..
 				translate("This feature requires the DNS server to support the Edns Client Subnet (RFC7871).")
 o.datatype = "ipaddr"
-o:depends("remote_dns_protocol", "tcp")
-o:depends("remote_dns_protocol", "doh")
 
 o = s:taboption("DNS", Flag, "remote_fakedns", "FakeDNS", translate("Use FakeDNS work in the shunt domain that proxy."))
 o.default = "0"
@@ -273,15 +265,30 @@ o:value("UseIP")
 o:value("UseIPv4")
 o:value("UseIPv6")
 
-hosts = s:taboption("DNS", TextValue, "dns_hosts", translate("Domain Override"))
-hosts.rows = 5
-hosts.wrap = "off"
+o = s:taboption("DNS", TextValue, "dns_hosts", translate("Domain Override"))
+o.rows = 5
+o.wrap = "off"
+o.remove = function(self, section)
+	local node_value = node:formvalue(global_cfgid)
+	local node_t = m:get(node_value)
+	if node_t.type == "Xray" then
+		AbstractValue.remove(self, section)
+	end
+end
 
 o = s:taboption("DNS", Button, "clear_ipset", translate("Clear IPSET"), translate("Try this feature if the rule modification does not take effect."))
 o.inputstyle = "remove"
 function o.write(e, e)
 	luci.sys.call("[ -n \"$(nft list sets 2>/dev/null | grep \"passwall2_\")\" ] && sh /usr/share/" .. appname .. "/nftables.sh flush_nftset || sh /usr/share/" .. appname .. "/iptables.sh flush_ipset > /dev/null 2>&1 &")
 	luci.http.redirect(api.url("log"))
+end
+
+for k, v in pairs(nodes_table) do
+	if v.type == "Xray" then
+		s.fields["remote_dns_client_ip"]:depends({ node = v.id, remote_dns_protocol = "tcp" })
+		s.fields["remote_dns_client_ip"]:depends({ node = v.id, remote_dns_protocol = "doh" })
+		s.fields["dns_hosts"]:depends({ node = v.id })
+	end
 end
 
 s:tab("log", translate("Log"))
@@ -342,7 +349,7 @@ o.default = n + 1080
 o.datatype = "port"
 o.rmempty = false
 
-if has_v2ray or has_xray then
+if has_singbox or has_xray then
 	o = s:option(Value, "http_port", "HTTP " .. translate("Listen Port") .. " " .. translate("0 is not use"))
 	o.default = 0
 	o.datatype = "port"
@@ -351,7 +358,7 @@ end
 for k, v in pairs(nodes_table) do
 	node:value(v.id, v["remark"])
 	if v.type == "Socks" then
-		if has_v2ray or has_xray then
+		if has_singbox or has_xray then
 			socks_node:value(v.id, v["remark"])
 		end
 	else
