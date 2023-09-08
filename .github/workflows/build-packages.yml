@@ -54,7 +54,7 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.tag }}
           FEEDNAME: packages_ci
-          PACKAGES: luci-app-passwall luci-app-passwall2 luci-app-ssr-plus brook hysteria ipt2socks pdnsd redsocks2 trojan trojan-go tuic-client xray-plugin v2ray-geodata naiveproxy chinadns-ng
+          PACKAGES: luci-app-passwall luci-app-passwall2 luci-app-ssr-plus brook hysteria ipt2socks pdnsd redsocks2 trojan trojan-go tuic-client xray-plugin v2ray-core v2ray-geodata naiveproxy chinadns-ng
           KEY_BUILD: ${{ secrets.sign_key }}
           NO_REFRESH_CHECK: true
 
