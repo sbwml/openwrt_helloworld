@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-ssr-plus
 PKG_VERSION:=187
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_NONE_V2RAY \
@@ -124,7 +124,7 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_Tuic_Client
 	bool "Include tuic-client"
 	select PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG
 	select PACKAGE_$(PKG_NAME)_INCLUDE_IPT2Socks
-	depends on aarch64||i686||x86_64
+	depends on aarch64||arm||i386||x86_64
 	depends on !(TARGET_x86_geode||TARGET_x86_legacy)
 	default n
 
