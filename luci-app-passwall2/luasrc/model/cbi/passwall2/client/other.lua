@@ -8,6 +8,7 @@ local has_fw3 = api.is_finded("fw3")
 local has_fw4 = api.is_finded("fw4")
 
 m = Map(appname)
+api.set_apply_on_parse(m)
 
 -- [[ Delay Settings ]]--
 s = m:section(TypedSection, "global_delay", translate("Delay Settings"))
@@ -164,7 +165,7 @@ if has_singbox then
 	s.addremove = false
 
 	o = s:option(Flag, "sniff_override_destination", translate("Override the connection destination address"), translate("Override the connection destination address with the sniffed domain."))
-	o.default = 1
+	o.default = 0
 	o.rmempty = false
 
 	o = s:option(Value, "geoip_path", translate("Custom geoip Path"))
