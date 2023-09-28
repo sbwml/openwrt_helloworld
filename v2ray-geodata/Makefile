@@ -15,7 +15,7 @@ include $(INCLUDE_DIR)/package.mk
 GEOIP_FILE:=geoip.dat
 define Download/geoip
   URL:=https://github.com/Loyalsoldier/geoip/releases/latest/download/
-  URL_FILE:=geoip.dat
+  URL_FILE:=geoip-only-cn-private.dat
   FILE:=$(GEOIP_FILE)
   HASH:=skip
 endef
