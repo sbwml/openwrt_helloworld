@@ -71,6 +71,7 @@ define Package/sing-box/config
 
     config SING_BOX_BUILD_ECH
     bool "Build with TLS ECH extension support"
+    default y
 
     config SING_BOX_BUILD_EMBEDDED_TOR
     bool "Build with embedded Tor support"
