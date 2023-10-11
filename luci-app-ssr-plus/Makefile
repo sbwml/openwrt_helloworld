@@ -43,7 +43,7 @@ LUCI_DEPENDS:= \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG:chinadns-ng \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_Hysteria:hysteria \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_Tuic_Client:tuic-client \
-	+PACKAGE_$(PKG_NAME)_INCLUDE_Shadow-tls:shadow-tls \
+	+PACKAGE_$(PKG_NAME)_INCLUDE_Shadow-TLS:shadow-tls \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_IPT2Socks:ipt2socks \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_Kcptun:kcptun-client \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_NaiveProxy:naiveproxy \
@@ -131,7 +131,7 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_Tuic_Client
 	default n
 
 config PACKAGE_$(PKG_NAME)_INCLUDE_Shadow-TLS
-	bool "Include shadow-tls"
+	bool "Include shadow-TLS"
 	select PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG
 	select PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Client
 	depends on aarch64||arm||x86_64
