@@ -27,7 +27,6 @@ PKG_CONFIG_DEPENDS:= \
 	CONFIG_SING_BOX_BUILD_LWIP \
 	CONFIG_SING_BOX_BUILD_QUIC \
 	CONFIG_SING_BOX_BUILD_REALITY_SERVER \
-	CONFIG_SING_BOX_BUILD_SHADOWSOCKSR \
 	CONFIG_SING_BOX_BUILD_UTLS \
 	CONFIG_SING_BOX_BUILD_V2RAY_API \
 	CONFIG_SING_BOX_BUILD_WIREGUARD
@@ -98,12 +97,6 @@ define Package/sing-box/config
     config SING_BOX_BUILD_REALITY_SERVER
     bool "Build with REALITY TLS server support"
 
-    config SING_BOX_BUILD_SHADOWSOCKSR
-    bool "Build with ShadowsockR support"
-    default y
-    help
-      It will be marked deprecated in 1.5.0 and removed entirely in 1.6.0.
-
     config SING_BOX_BUILD_UTLS
     bool "Build with uTLS support"
     default y
@@ -128,7 +121,6 @@ GO_PKG_TAGS:=$(subst $(space),$(comma),$(strip \
 	$(if $(CONFIG_SING_BOX_BUILD_LWIP),with_lwip) \
 	$(if $(CONFIG_SING_BOX_BUILD_QUIC),with_quic) \
 	$(if $(CONFIG_SING_BOX_BUILD_REALITY_SERVER),with_reality_server) \
-	$(if $(CONFIG_SING_BOX_BUILD_SHADOWSOCKSR),with_shadowsocksr) \
 	$(if $(CONFIG_SING_BOX_BUILD_UTLS),with_utls) \
 	$(if $(CONFIG_SING_BOX_BUILD_V2RAY_API),with_v2ray_api) \
 	$(if $(CONFIG_SING_BOX_BUILD_WIREGUARD),with_wireguard) \
