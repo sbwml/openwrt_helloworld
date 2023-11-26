@@ -3,6 +3,8 @@ name: Build Packages
 on:
   watch:
     types: started
+  repository_dispatch:
+    types: build
 
 jobs:
   build:
@@ -16,7 +18,7 @@ jobs:
           - aarch64_generic
           - x86_64
         tag:
-          - openwrt-22.03
+          - openwrt-23.05
 
     steps:
       - uses: actions/checkout@v3
