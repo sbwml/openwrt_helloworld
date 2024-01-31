@@ -27,3 +27,10 @@ checkipv6.dyndns.org
 checkipv6.synology.com
 checkport.synology.com
 ddns.synology.com
+
+#DoT/DoH
+dns.alidns.com
+doh.pub
+dot.pub
+doh.360.cn
+dot.360.cn
