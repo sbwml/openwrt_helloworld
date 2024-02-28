@@ -14,9 +14,9 @@ PKG_SOURCE_BODY:=unknown-linux-musl
 PKG_SOURCE_FOOTER:=tar.xz
 
 ifeq ($(filter $(ARCH),mips mipsel),)
-  PKG_SOURCE_URL:=https://github.com/sbwml/shadowsocks-rust-mips/releases/download/v$(PKG_VERSION)/
-else
   PKG_SOURCE_URL:=https://github.com/shadowsocks/shadowsocks-rust/releases/download/v$(PKG_VERSION)/
+else
+  PKG_SOURCE_URL:=https://github.com/sbwml/shadowsocks-rust-mips/releases/download/v$(PKG_VERSION)/
 endif
 
 ifeq ($(ARCH),aarch64)
