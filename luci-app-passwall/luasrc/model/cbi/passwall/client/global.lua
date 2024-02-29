@@ -314,7 +314,12 @@ o:value("8.8.8.8", "8.8.8.8 (Google)")
 o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
 o:value("208.67.220.220", "208.67.220.220 (OpenDNS)")
 o:value("208.67.222.222", "208.67.222.222 (OpenDNS)")
-o:value("127.0.0.1:5335", "127.0.0.1:5335 (MosDNS)")
+if nixio.fs.access("/usr/share/mosdns/default.yaml") then
+	local mosdns_port = string.gsub(luci.sys.exec("uci -q get mosdns.config.listen_port"), "\n", "")
+	if mosdns_port ~= nil and result ~= "" then
+		o:value("127.0.0.1:" .. mosdns_port, "127.0.0.1:" .. mosdns_port .. " (MosDNS)")
+	end
+end
 o:depends({dns_mode = "dns2socks"})
 o:depends({dns_mode = "dns2tcp"})
 o:depends({dns_mode = "udp"})
