@@ -1,8 +1,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-ssr-plus
-PKG_VERSION:=187
-PKG_RELEASE:=2
+PKG_VERSION:=188
+PKG_RELEASE:=5
 
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_NONE_V2RAY \
@@ -32,10 +32,12 @@ PKG_CONFIG_DEPENDS:= \
 LUCI_TITLE:=SS/SSR/V2Ray/Trojan/NaiveProxy/TUIC/ShadowTLS/Hysteria/Socks5/Tun LuCI interface
 LUCI_PKGARCH:=all
 LUCI_DEPENDS:= \
-	@(PACKAGE_libustream-mbedtls||PACKAGE_libustream-openssl||PACKAGE_libustream-wolfssl) \
 	+coreutils +coreutils-base64 +dns2socks +dns2tcp +dnsmasq-full +ipset +kmod-ipt-nat \
-	+ip-full +iptables +iptables-mod-tproxy +lua +lua-neturl +libuci-lua +luci-lib-ipkg +microsocks \
+	+ip-full +iptables +iptables-mod-tproxy +lua +lua-neturl +libuci-lua +microsocks \
 	+tcping +resolveip +shadowsocksr-libev-ssr-check +uclient-fetch \
+	+PACKAGE_$(PKG_NAME)_INCLUDE_libustream-mbedtls:libustream-mbedtls \
+	+PACKAGE_$(PKG_NAME)_INCLUDE_libustream-openssl:libustream-openssl \
+	+PACKAGE_$(PKG_NAME)_INCLUDE_libustream-wolfssl:libustream-wolfssl \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_V2ray:curl \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_V2ray:v2ray-core \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_Xray:curl \
@@ -61,7 +63,22 @@ LUCI_DEPENDS:= \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Libev_Server:shadowsocksr-libev-ssr-server \
 	+PACKAGE_$(PKG_NAME)_INCLUDE_Trojan:trojan
 
+
 define Package/$(PKG_NAME)/config
+
+choice
+	prompt "Uclient SSL Lib Selection"
+	default PACKAGE_$(PKG_NAME)_INCLUDE_libustream-openssl
+	
+	config PACKAGE_$(PKG_NAME)_INCLUDE_libustream-mbedtls
+	bool "libustream-mbedtls"
+
+	config PACKAGE_$(PKG_NAME)_INCLUDE_libustream-openssl
+	bool "libustream-openssl"
+
+	config PACKAGE_$(PKG_NAME)_INCLUDE_PACKAGE_libustream-wolfssl
+	bool "libustream-wolfssl"
+endchoice
 
 choice
 	prompt "Shadowsocks Client Selection"
@@ -179,7 +196,9 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_Trojan
 	bool "Include Trojan"
 	select PACKAGE_$(PKG_NAME)_INCLUDE_IPT2Socks
 	default n
+
 endef
+
 
 define Package/$(PKG_NAME)/conffiles
 /etc/config/shadowsocksr
