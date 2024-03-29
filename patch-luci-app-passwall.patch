@@ -1,0 +1,630 @@
+From f755497804f81df6aa0097967ffe90d3aac5a2e3 Mon Sep 17 00:00:00 2001
+From: actions <action@github.com>
+Date: Sat, 30 Mar 2024 04:44:39 +0800
+Subject: [PATCH] auto-patches
+
+---
+ luci-app-passwall/Makefile                    |  1 -
+ .../luasrc/controller/passwall.lua            |  2 +-
+ .../luasrc/model/cbi/passwall/client/acl.lua  |  1 -
+ .../model/cbi/passwall/client/acl_config.lua  |  1 -
+ .../model/cbi/passwall/client/app_update.lua  |  1 -
+ .../model/cbi/passwall/client/global.lua      |  7 +++-
+ .../model/cbi/passwall/client/haproxy.lua     |  1 -
+ .../model/cbi/passwall/client/node_config.lua |  1 -
+ .../model/cbi/passwall/client/node_list.lua   |  1 -
+ .../cbi/passwall/client/node_subscribe.lua    |  1 -
+ .../passwall/client/node_subscribe_config.lua |  1 -
+ .../model/cbi/passwall/client/other.lua       |  1 -
+ .../luasrc/model/cbi/passwall/client/rule.lua |  2 --
+ .../model/cbi/passwall/client/rule_list.lua   |  1 -
+ .../model/cbi/passwall/client/shunt_rules.lua |  1 -
+ .../cbi/passwall/client/socks_config.lua      |  1 -
+ .../model/cbi/passwall/server/index.lua       |  1 -
+ .../luasrc/model/cbi/passwall/server/user.lua |  1 -
+ luci-app-passwall/luasrc/passwall/api.lua     | 16 ---------
+ .../view/passwall/app_update/app_version.htm  | 20 +++++------
+ .../luasrc/view/passwall/global/status.htm    | 36 ++++++++++++++++---
+ .../view/passwall/node_list/node_list.htm     |  2 +-
+ .../view/passwall/rule/rule_version.htm       |  2 +-
+ .../root/etc/hotplug.d/iface/98-passwall      | 23 ------------
+ luci-app-passwall/root/etc/init.d/passwall    |  8 +----
+ .../root/etc/uci-defaults/luci-passwall       | 14 +-------
+ .../root/usr/share/passwall/0_default_config  |  2 +-
+ .../root/usr/share/passwall/app.sh            | 13 +++++++
+ .../root/usr/share/passwall/rules/direct_host | 13 +++++++
+ .../root/usr/share/passwall/rules/direct_ip   |  5 +++
+ .../root/usr/share/passwall/rules/proxy_host  |  2 --
+ 31 files changed, 83 insertions(+), 99 deletions(-)
+ delete mode 100644 luci-app-passwall/root/etc/hotplug.d/iface/98-passwall
+
+diff --git a/luci-app-passwall/Makefile b/luci-app-passwall/Makefile
+index ce00927..50231c6 100644
+--- a/luci-app-passwall/Makefile
++++ b/luci-app-passwall/Makefile
+@@ -171,7 +171,6 @@ define Package/$(PKG_NAME)/conffiles
+ /usr/share/passwall/rules/lanlist_ipv4
+ /usr/share/passwall/rules/lanlist_ipv6
+ /usr/share/passwall/rules/domains_excluded
+-/www/luci-static/resources/qrcode.min.js
+ endef
+ 
+ include $(TOPDIR)/feeds/luci/luci.mk
+diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
+index 14596b4..c7f958c 100644
+--- a/luci-app-passwall/luasrc/controller/passwall.lua
++++ b/luci-app-passwall/luasrc/controller/passwall.lua
+@@ -243,7 +243,7 @@ function connect_status()
+ 	local e = {}
+ 	e.use_time = ""
+ 	local url = luci.http.formvalue("url")
+-	local result = luci.sys.exec('curl --connect-timeout 3 -o /dev/null -I -sk -w "%{http_code}:%{time_appconnect}" ' .. url)
++	local result = luci.sys.exec('curl --connect-timeout 3 -o /dev/null -I -sk -w "%{http_code}:%{time_starttransfer}" ' .. url)
+ 	local code = tonumber(luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $1}'") or "0")
+ 	if code ~= 0 then
+ 		local use_time = luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $2}'")
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/acl.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/acl.lua
+index c303efe..6b4319e 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/acl.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/acl.lua
+@@ -3,7 +3,6 @@ local appname = "passwall"
+ local sys = api.sys
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ s = m:section(TypedSection, "global", translate("ACLs"), "<font color='red'>" .. translate("ACLs is a tools which used to designate specific IP proxy mode.") .. "</font>")
+ s.anonymous = true
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua
+index 50a93e6..5a3773f 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua
+@@ -13,7 +13,6 @@ local port_validate = function(self, value, t)
+ end
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ local nodes_table = {}
+ for k, e in ipairs(api.get_valid_nodes()) do
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/app_update.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/app_update.lua
+index 8a59a43..9d47562 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/app_update.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/app_update.lua
+@@ -2,7 +2,6 @@ local api = require "luci.passwall.api"
+ local appname = "passwall"
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ -- [[ App Settings ]]--
+ s = m:section(TypedSection, "global_app", translate("App Update"),
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
+index c26498f..ca46167 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
+@@ -9,7 +9,6 @@ local has_chnlist = api.fs.access("/usr/share/passwall/rules/chnlist")
+ local has_chnroute = api.fs.access("/usr/share/passwall/rules/chnroute")
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ local nodes_table = {}
+ for k, e in ipairs(api.get_valid_nodes()) do
+@@ -330,6 +329,12 @@ o:value("8.8.8.8", "8.8.8.8 (Google)")
+ o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
+ o:value("208.67.220.220", "208.67.220.220 (OpenDNS)")
+ o:value("208.67.222.222", "208.67.222.222 (OpenDNS)")
++if nixio.fs.access("/usr/share/mosdns/default.yaml") then
++	local mosdns_port = string.gsub(luci.sys.exec("uci -q get mosdns.config.listen_port"), "\n", "")
++	if mosdns_port ~= nil and result ~= "" then
++		o:value("127.0.0.1:" .. mosdns_port, "127.0.0.1:" .. mosdns_port .. " (MosDNS)")
++	end
++end
+ o:depends({dns_mode = "dns2socks"})
+ o:depends({dns_mode = "dns2tcp"})
+ o:depends({dns_mode = "udp"})
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/haproxy.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/haproxy.lua
+index 5228baa..c3bc5fa 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/haproxy.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/haproxy.lua
+@@ -16,7 +16,6 @@ for k, e in ipairs(api.get_valid_nodes()) do
+ end
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ -- [[ Haproxy Settings ]]--
+ s = m:section(TypedSection, "global_haproxy")
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/node_config.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/node_config.lua
+index 4f1ff1a..98504b8 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/node_config.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/node_config.lua
+@@ -10,7 +10,6 @@ end
+ 
+ m = Map(appname, translate("Node Config"))
+ m.redirect = api.url()
+-api.set_apply_on_parse(m)
+ 
+ s = m:section(NamedSection, arg[1], "nodes", "")
+ s.addremove = false
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/node_list.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/node_list.lua
+index 041814f..b37587f 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/node_list.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/node_list.lua
+@@ -4,7 +4,6 @@ local sys = api.sys
+ local datatypes = api.datatypes
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ -- [[ Other Settings ]]--
+ s = m:section(TypedSection, "global_other")
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/node_subscribe.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/node_subscribe.lua
+index 9682502..c8688e2 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/node_subscribe.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/node_subscribe.lua
+@@ -44,7 +44,6 @@ if has_hysteria2 then
+ end
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ -- [[ Subscribe Settings ]]--
+ s = m:section(TypedSection, "global_subscribe", "")
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/node_subscribe_config.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/node_subscribe_config.lua
+index 55bb691..e13625a 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/node_subscribe_config.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/node_subscribe_config.lua
+@@ -45,7 +45,6 @@ end
+ 
+ m = Map(appname)
+ m.redirect = api.url("node_subscribe")
+-api.set_apply_on_parse(m)
+ 
+ s = m:section(NamedSection, arg[1])
+ s.addremove = false
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/other.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/other.lua
+index 2e2800c..f1a3daf 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/other.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/other.lua
+@@ -11,7 +11,6 @@ local port_validate = function(self, value, t)
+ end
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ -- [[ Delay Settings ]]--
+ s = m:section(TypedSection, "global_delay", translate("Delay Settings"))
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/rule.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/rule.lua
+index 375cf9c..5823ce3 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/rule.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/rule.lua
+@@ -4,8 +4,6 @@ local has_xray = api.finded_com("xray")
+ local has_singbox = api.finded_com("singbox")
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+-
+ -- [[ Rule Settings ]]--
+ s = m:section(TypedSection, "global_rules", translate("Rule status"))
+ s.anonymous = true
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua
+index 74e939f..8c76bbe 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua
+@@ -7,7 +7,6 @@ local path = string.format("/usr/share/%s/rules/", appname)
+ local route_hosts_path = "/etc/"
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ -- [[ Rule List Settings ]]--
+ s = m:section(TypedSection, "global_rules")
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/shunt_rules.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/shunt_rules.lua
+index 8896efe..8d19334 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/shunt_rules.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/shunt_rules.lua
+@@ -4,7 +4,6 @@ local datatypes = api.datatypes
+ 
+ m = Map(appname, "Sing-Box/Xray " .. translate("Shunt Rule"))
+ m.redirect = api.url()
+-api.set_apply_on_parse(m)
+ 
+ s = m:section(NamedSection, arg[1], "shunt_rules", "")
+ s.addremove = false
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/socks_config.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/socks_config.lua
+index 9d198dd..b357a99 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/client/socks_config.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/socks_config.lua
+@@ -5,7 +5,6 @@ local has_singbox = api.finded_com("singbox")
+ local has_xray = api.finded_com("xray")
+ 
+ m = Map(appname)
+-api.set_apply_on_parse(m)
+ 
+ local nodes_table = {}
+ for k, e in ipairs(api.get_valid_nodes()) do
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/server/index.lua b/luci-app-passwall/luasrc/model/cbi/passwall/server/index.lua
+index 5491e42..d18b754 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/server/index.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/server/index.lua
+@@ -1,7 +1,6 @@
+ local api = require "luci.passwall.api"
+ 
+ m = Map("passwall_server", translate("Server-Side"))
+-api.set_apply_on_parse(m)
+ 
+ t = m:section(NamedSection, "global", "global")
+ t.anonymous = true
+diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/server/user.lua b/luci-app-passwall/luasrc/model/cbi/passwall/server/user.lua
+index 7c46259..b4371db 100644
+--- a/luci-app-passwall/luasrc/model/cbi/passwall/server/user.lua
++++ b/luci-app-passwall/luasrc/model/cbi/passwall/server/user.lua
+@@ -4,7 +4,6 @@ local types_dir = "/usr/lib/lua/luci/model/cbi/passwall/server/type/"
+ 
+ m = Map("passwall_server", translate("Server Config"))
+ m.redirect = api.url("server")
+-api.set_apply_on_parse(m)
+ 
+ s = m:section(NamedSection, arg[1], "user", "")
+ s.addremove = false
+diff --git a/luci-app-passwall/luasrc/passwall/api.lua b/luci-app-passwall/luasrc/passwall/api.lua
+index 0a3f8e1..d0b2f85 100644
+--- a/luci-app-passwall/luasrc/passwall/api.lua
++++ b/luci-app-passwall/luasrc/passwall/api.lua
+@@ -999,22 +999,6 @@ function to_check_self()
+ 	}
+ end
+ 
+-function is_js_luci()
+-	return sys.call('[ -f "/www/luci-static/resources/uci.js" ]') == 0
+-end
+-
+-function set_apply_on_parse(map)
+-	if is_js_luci() == true then
+-		map.apply_on_parse = false
+-		map.on_after_apply = function(self)
+-			if self.redirect then
+-				os.execute("sleep 1")
+-				luci.http.redirect(self.redirect)
+-			end
+-		end
+-	end
+-end
+-
+ function luci_types(id, m, s, type_name, option_prefix)
+ 	local rewrite_option_table = {}
+ 	for key, value in pairs(s.fields) do
+diff --git a/luci-app-passwall/luasrc/view/passwall/app_update/app_version.htm b/luci-app-passwall/luasrc/view/passwall/app_update/app_version.htm
+index c49ab6f..1591b79 100644
+--- a/luci-app-passwall/luasrc/view/passwall/app_update/app_version.htm
++++ b/luci-app-passwall/luasrc/view/passwall/app_update/app_version.htm
+@@ -177,12 +177,10 @@ local version = {}
+ <div class="cbi-value">
+ 	<label class="cbi-value-title">Passwall <%:Version%></label>
+ 	<div class="cbi-value-field">
+-		<div class="cbi-value-description">
+-			<span>【 <%=api.get_version()%> 】</span>
+-			<input class="btn cbi-button cbi-button-apply" type="button" id="passwall-check_btn"
+-				onclick="onBtnClick(this,'passwall');" value="<%:Check update%>" />
+-			<span id="passwall-check_btn-detail"></span>
+-		</div>
++		<span>【 <%=api.get_version()%> 】</span>
++		<input class="btn cbi-button cbi-button-apply" type="button" id="passwall-check_btn"
++			onclick="onBtnClick(this,'passwall');" value="<%:Check update%>" />
++		<span id="passwall-check_btn-detail"></span>
+ 	</div>
+ </div>
+ 
+@@ -193,12 +191,10 @@ local version = {}
+ 		<%:Version%>
+ 	</label>
+ 	<div class="cbi-value-field">
+-		<div class="cbi-value-description">
+-			<span>【 <%=version[k] ~="" and version[k] or translate("Null") %> 】</span>
+-			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn"
+-				onclick="onBtnClick(this,'<%=k%>');" value="<%:Check update%>" />
+-			<span id="_<%=k%>-check_btn-detail"></span>
+-		</div>
++		<span>【 <%=version[k] ~="" and version[k] or translate("Null") %> 】</span>
++		<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn"
++			onclick="onBtnClick(this,'<%=k%>');" value="<%:Check update%>" />
++		<span id="_<%=k%>-check_btn-detail"></span>
+ 	</div>
+ </div>
+ <%end%>
+diff --git a/luci-app-passwall/luasrc/view/passwall/global/status.htm b/luci-app-passwall/luasrc/view/passwall/global/status.htm
+index e6b804c..46c50d4 100644
+--- a/luci-app-passwall/luasrc/view/passwall/global/status.htm
++++ b/luci-app-passwall/luasrc/view/passwall/global/status.htm
+@@ -1,5 +1,11 @@
+ <%
+ local api = require "luci.passwall.api"
++local fs = require "nixio.fs"
++local uci = require 'luci.model.uci'.cursor()
++local mode = 'normal'
++if fs.access('/etc/config/argon') then
++	mode = uci:get_first('argon', 'global', 'mode')
++end
+ -%>
+ 
+ <style>
+@@ -52,7 +58,29 @@ https://github.com/pure-css/pure/blob/master/LICENSE.md
+ 		color:#8898aa!important;
+ 		line-height: 1.8em;
+ 		min-height: 48px;
++		background-image: linear-gradient(270deg, #dde2ff 0%, #fffeff 100%);
++		border-radius: 12.375px;
+ 	}
++	@media (prefers-color-scheme: dark) {
++		.block h4 {
++			background-image: none;
++			background-color: #2c323c;
++		}
++		.block.pure-g {
++			background: #444950;
++			box-shadow: unset;
++		}
++	}
++	<% if mode == 'dark' then %>
++		.block h4 {
++			background-image: none;
++			background-color: #2c323c;
++		}
++		.block.pure-g {
++			background: #444950;
++			box-shadow: unset;
++		}
++	<% end -%>
+ 
+ 	.check {
+ 		cursor: pointer;
+@@ -137,7 +165,7 @@ https://github.com/pure-css/pure/blob/master/LICENSE.md
+ 				</div>
+ 			</div>
+ 		</div>
+-		<div class="pure-u-1-4 check" onclick="check_connect('baidu', 'https://www.baidu.com')">
++		<div class="pure-u-1-4 check" onclick="check_connect('baidu', 'http://www.baidu.com')">
+ 			<div class="block pure-g">
+ 				<div class="pure-u-1-3">
+ 					<div class="img-con">
+@@ -149,7 +177,7 @@ https://github.com/pure-css/pure/blob/master/LICENSE.md
+ 				</div>
+ 			</div>
+ 		</div>
+-		<div class="pure-u-1-4 check" onclick="check_connect('google', 'https://www.google.com/generate_204')">
++		<div class="pure-u-1-4 check" onclick="check_connect('google', 'http://www.google.com/generate_204')">
+ 			<div class="block pure-g">
+ 				<div class="pure-u-1-3">
+ 					<div class="img-con">
+@@ -161,7 +189,7 @@ https://github.com/pure-css/pure/blob/master/LICENSE.md
+ 				</div>
+ 			</div>
+ 		</div>
+-		<div class="pure-u-1-4 check" onclick="check_connect('github', 'https://github.com')">
++		<div class="pure-u-1-4 check" onclick="check_connect('github', 'http://github.com')">
+ 			<div class="block pure-g">
+ 				<div class="pure-u-1-3">
+ 					<div class="img-con">
+@@ -173,7 +201,7 @@ https://github.com/pure-css/pure/blob/master/LICENSE.md
+ 				</div>
+ 			</div>
+ 		</div>
+-		<div class="pure-u-1-4 check" onclick="check_connect('instagram', 'https://www.instagram.com')">
++		<div class="pure-u-1-4 check" onclick="check_connect('instagram', 'http://www.instagram.com')">
+ 			<div class="block pure-g">
+ 				<div class="pure-u-1-3">
+ 					<div class="img-con">
+diff --git a/luci-app-passwall/luasrc/view/passwall/node_list/node_list.htm b/luci-app-passwall/luasrc/view/passwall/node_list/node_list.htm
+index 90bf6da..874b923 100644
+--- a/luci-app-passwall/luasrc/view/passwall/node_list/node_list.htm
++++ b/luci-app-passwall/luasrc/view/passwall/node_list/node_list.htm
+@@ -26,7 +26,7 @@ table td, .table .td {
+ }
+ 
+ ._now_use {
+-	background: #94e1ff !important;
++	background: #5e72e445 !important;
+ }
+ 
+ .ping a:hover{
+diff --git a/luci-app-passwall/luasrc/view/passwall/rule/rule_version.htm b/luci-app-passwall/luasrc/view/passwall/rule/rule_version.htm
+index 24662de..77b6a0b 100644
+--- a/luci-app-passwall/luasrc/view/passwall/rule/rule_version.htm
++++ b/luci-app-passwall/luasrc/view/passwall/rule/rule_version.htm
+@@ -70,7 +70,7 @@ local geosite_update = api.uci_get_type("global_rules", "geosite_update", "1") =
+ 				<input class="cbi-input-checkbox" type="checkbox" name="geosite" value="1" <%=geosite_update%> />
+ 				geosite
+ 			</label>
+-			<input class="btn cbi-button cbi-button-apply" type="button" id="update_rules_btn" onclick="update_rules(this)" value="<%:Manually update%>" />
++			<br><br><input class="btn cbi-button cbi-button-apply" type="button" id="update_rules_btn" onclick="update_rules(this)" value="<%:Manually update%>" />
+ 		</div>
+ 	</div>
+ </div>
+diff --git a/luci-app-passwall/root/etc/hotplug.d/iface/98-passwall b/luci-app-passwall/root/etc/hotplug.d/iface/98-passwall
+deleted file mode 100644
+index e34868b..0000000
+--- a/luci-app-passwall/root/etc/hotplug.d/iface/98-passwall
++++ /dev/null
+@@ -1,23 +0,0 @@
+-#!/bin/sh
+-
+-[[ "$ACTION" == "ifup" && $(uci get "passwall.@global[0].enabled") == "1" ]] && [ -f /var/lock/passwall_ready.lock ] && {
+-	default_device=$(ip route | grep default | awk -F 'dev ' '{print $2}' | awk '{print $1}')
+-	[ "$default_device" == "$DEVICE" ] && {
+-		LOCK_FILE_DIR=/var/lock
+-		[ ! -d ${LOCK_FILE_DIR} ] && mkdir -p ${LOCK_FILE_DIR}
+-		LOCK_FILE="${LOCK_FILE_DIR}/passwall_ifup.lock"
+-		if [ -s ${LOCK_FILE} ]; then
+-			SPID=$(cat ${LOCK_FILE})
+-			if [ -e /proc/${SPID}/status ]; then
+-				exit 1
+-			fi
+-			cat /dev/null > ${LOCK_FILE}
+-		fi
+-		echo $$ > ${LOCK_FILE}
+-		
+-		/etc/init.d/passwall restart >/dev/null 2>&1 &
+-		echo "passwall: restart when $INTERFACE ifup" > /dev/kmsg
+-		
+-		rm -rf ${LOCK_FILE}
+-	}
+-}
+diff --git a/luci-app-passwall/root/etc/init.d/passwall b/luci-app-passwall/root/etc/init.d/passwall
+index c14fb8b..97de59c 100755
+--- a/luci-app-passwall/root/etc/init.d/passwall
++++ b/luci-app-passwall/root/etc/init.d/passwall
+@@ -33,13 +33,7 @@ unlock() {
+ }
+ 
+ boot() {
+-	local delay=$(uci -q get ${CONFIG}.@global_delay[0].start_delay || echo 1)
+-	if [ "$delay" -gt 0 ]; then
+-		$APP_FILE echolog "执行启动延时 $delay 秒后再启动!"
+-		sleep $delay
+-	fi
+-	restart
+-	touch ${LOCK_FILE_DIR}/${CONFIG}_ready.lock
++	$APP_FILE boot
+ }
+ 
+ start() {
+diff --git a/luci-app-passwall/root/etc/uci-defaults/luci-passwall b/luci-app-passwall/root/etc/uci-defaults/luci-passwall
+index 816e28c..39ab320 100755
+--- a/luci-app-passwall/root/etc/uci-defaults/luci-passwall
++++ b/luci-app-passwall/root/etc/uci-defaults/luci-passwall
+@@ -27,22 +27,10 @@ uci -q batch <<-EOF >/dev/null
+ 	commit uhttpd
+ EOF
+ 
++
+ touch /etc/config/passwall_show >/dev/null 2>&1
+ [ ! -s "/etc/config/passwall" ] && cp -f /usr/share/passwall/0_default_config /etc/config/passwall
+ 
+-use_nft=$(uci -q get passwall.@global_forwarding[0].use_nft || echo "0")
+-[ "${use_nft}" = "0" ] && {
+-	if [ -z "$(command -v iptables-legacy || command -v iptables)" ] || [ -z "$(command -v ipset)" ] || [ -z "$(dnsmasq --version | grep 'Compile time options:.* ipset')" ]; then
+-		[ "$(opkg list-installed | grep "firewall4")" ] && [ "$(opkg list-installed | grep "nftables")" ] && {
+-			[ "$(opkg list-installed | grep "kmod\-nft\-socket")" ] && [ "$(opkg list-installed | grep "kmod\-nft\-tproxy")" ] && [ "$(opkg list-installed | grep "kmod\-nft\-nat")" ] && {
+-				uci -q set passwall.@global_forwarding[0].use_nft=1
+-				uci -q commit passwall
+-				sed -i "s#use_nft '0'#use_nft '1'#g" /usr/share/passwall/0_default_config
+-			}
+-		}
+-	fi
+-}
+-
+ global_xray=$(uci -q get passwall.@global_xray[0])
+ [ -z "${global_xray}" ] && {
+ 	cfgid=$(uci add passwall global_xray)
+diff --git a/luci-app-passwall/root/usr/share/passwall/0_default_config b/luci-app-passwall/root/usr/share/passwall/0_default_config
+index 13ea985..78727c1 100644
+--- a/luci-app-passwall/root/usr/share/passwall/0_default_config
++++ b/luci-app-passwall/root/usr/share/passwall/0_default_config
+@@ -30,7 +30,7 @@ config global_haproxy
+ config global_delay
+ 	option auto_on '0'
+ 	option start_daemon '1'
+-	option start_delay '60'
++	option start_delay '15'
+ 
+ config global_forwarding
+ 	option tcp_no_redir_ports 'disable'
+diff --git a/luci-app-passwall/root/usr/share/passwall/app.sh b/luci-app-passwall/root/usr/share/passwall/app.sh
+index b095dc2..eb97bbe 100755
+--- a/luci-app-passwall/root/usr/share/passwall/app.sh
++++ b/luci-app-passwall/root/usr/share/passwall/app.sh
+@@ -1576,6 +1576,16 @@ acl_app() {
+ 	}
+ }
+ 
++boot() {
++	local delay=$(config_t_get global_delay start_delay 1)
++	if [ "$delay" -gt 0 ]; then
++		echolog "执行启动延时 $delay 秒后再启动!"
++		sleep $delay && start >/dev/null 2>&1 &
++	else
++		start
++	fi
++}
++
+ start() {
+ 	ulimit -n 65535
+ 	start_haproxy
+@@ -1744,4 +1754,7 @@ stop)
+ start)
+ 	start
+ 	;;
++boot)
++	boot
++	;;
+ esac
+diff --git a/luci-app-passwall/root/usr/share/passwall/rules/direct_host b/luci-app-passwall/root/usr/share/passwall/rules/direct_host
+index bc16864..b4165b8 100644
+--- a/luci-app-passwall/root/usr/share/passwall/rules/direct_host
++++ b/luci-app-passwall/root/usr/share/passwall/rules/direct_host
+@@ -3,8 +3,12 @@ microsoft.com
+ dyndns.com
+ douyucdn.cn
+ douyucdn2.cn
++gh.cooluc.com
+ location.services.mozilla.com
+ 
++# google
++dl.google.com
++
+ #steam
+ steamcontent.com
+ dl.steam.clngaa.com
+@@ -18,6 +22,15 @@ cdn-qc.content.steamchina.com
+ cdn-ali.content.steamchina.com
+ epicgames-download1-1251447533.file.myqcloud.com
+ 
++# Synology ddns
++account.synology.com
++checkip.dyndns.org
++checkip.synology.com
++checkipv6.dyndns.org
++checkipv6.synology.com
++checkport.synology.com
++ddns.synology.com
++
+ #DoT/DoH
+ dns.alidns.com
+ doh.pub
+diff --git a/luci-app-passwall/root/usr/share/passwall/rules/direct_ip b/luci-app-passwall/root/usr/share/passwall/rules/direct_ip
+index 04e855d..4d1fdee 100644
+--- a/luci-app-passwall/root/usr/share/passwall/rules/direct_ip
++++ b/luci-app-passwall/root/usr/share/passwall/rules/direct_ip
+@@ -4,5 +4,10 @@
+ 223.6.6.6
+ 119.29.29.29
+ 180.76.76.76
++34.149.0.0/16
++134.195.211.0/24
++148.135.119.0/24
+ 1.12.12.12
+ 120.53.53.53
++203.208.39.192/28
++203.208.40.0/23
+diff --git a/luci-app-passwall/root/usr/share/passwall/rules/proxy_host b/luci-app-passwall/root/usr/share/passwall/rules/proxy_host
+index e9a2bd7..56ac579 100644
+--- a/luci-app-passwall/root/usr/share/passwall/rules/proxy_host
++++ b/luci-app-passwall/root/usr/share/passwall/rules/proxy_host
+@@ -1,4 +1,3 @@
+-bing.com
+ sspanel.net
+ v2ex.com
+ c.mi.com
+@@ -8,7 +7,6 @@ googleapis.cn
+ googleapis.com
+ google.com.tw
+ google.com.hk
+-gstatic.com
+ xn--ngstr-lra8j.com
+ 
+ #github
+-- 
+2.42.0
+
