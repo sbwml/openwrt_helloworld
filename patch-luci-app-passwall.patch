@@ -1,8 +1,9 @@
-From f755497804f81df6aa0097967ffe90d3aac5a2e3 Mon Sep 17 00:00:00 2001
-From: actions <action@github.com>
-Date: Sat, 30 Mar 2024 04:44:39 +0800
-Subject: [PATCH] auto-patches
+From 8020f497bee2003a31a6bb2a744ed810bb758439 Mon Sep 17 00:00:00 2001
+From: sbwml <admin@cooluc.com>
+Date: Mon, 8 Apr 2024 08:35:43 +0800
+Subject: [PATCH] diy
 
+Signed-off-by: sbwml <admin@cooluc.com>
 ---
  luci-app-passwall/Makefile                    |  1 -
  .../luasrc/controller/passwall.lua            |  2 +-
@@ -27,19 +28,15 @@ Subject: [PATCH] auto-patches
  .../luasrc/view/passwall/global/status.htm    | 36 ++++++++++++++++---
  .../view/passwall/node_list/node_list.htm     |  2 +-
  .../view/passwall/rule/rule_version.htm       |  2 +-
- .../root/etc/hotplug.d/iface/98-passwall      | 23 ------------
- luci-app-passwall/root/etc/init.d/passwall    |  8 +----
- .../root/etc/uci-defaults/luci-passwall       | 14 +-------
+ .../root/etc/uci-defaults/luci-passwall       |  1 +
  .../root/usr/share/passwall/0_default_config  |  2 +-
- .../root/usr/share/passwall/app.sh            | 13 +++++++
  .../root/usr/share/passwall/rules/direct_host | 13 +++++++
  .../root/usr/share/passwall/rules/direct_ip   |  5 +++
- .../root/usr/share/passwall/rules/proxy_host  |  2 --
- 31 files changed, 83 insertions(+), 99 deletions(-)
- delete mode 100644 luci-app-passwall/root/etc/hotplug.d/iface/98-passwall
+ .../root/usr/share/passwall/rules/proxy_host  |  1 -
+ 28 files changed, 69 insertions(+), 55 deletions(-)
 
 diff --git a/luci-app-passwall/Makefile b/luci-app-passwall/Makefile
-index ce00927..50231c6 100644
+index 9e0cdee..55ab008 100644
 --- a/luci-app-passwall/Makefile
 +++ b/luci-app-passwall/Makefile
 @@ -171,7 +171,6 @@ define Package/$(PKG_NAME)/conffiles
@@ -100,7 +97,7 @@ index 8a59a43..9d47562 100644
  -- [[ App Settings ]]--
  s = m:section(TypedSection, "global_app", translate("App Update"),
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-index c26498f..ca46167 100644
+index e202ccd..3c99e2e 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 @@ -9,7 +9,6 @@ local has_chnlist = api.fs.access("/usr/share/passwall/rules/chnlist")
@@ -210,11 +207,11 @@ index 375cf9c..5823ce3 100644
  s = m:section(TypedSection, "global_rules", translate("Rule status"))
  s.anonymous = true
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua
-index 74e939f..8c76bbe 100644
+index 1c66608..3fac86c 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua
-@@ -7,7 +7,6 @@ local path = string.format("/usr/share/%s/rules/", appname)
- local route_hosts_path = "/etc/"
+@@ -9,7 +9,6 @@ local chnlist_path = "/usr/share/passwall/rules/chnlist"
+ local chnroute_path = "/usr/share/passwall/rules/chnroute"
  
  m = Map(appname)
 -api.set_apply_on_parse(m)
@@ -442,59 +439,11 @@ index 24662de..77b6a0b 100644
  		</div>
  	</div>
  </div>
-diff --git a/luci-app-passwall/root/etc/hotplug.d/iface/98-passwall b/luci-app-passwall/root/etc/hotplug.d/iface/98-passwall
-deleted file mode 100644
-index e34868b..0000000
---- a/luci-app-passwall/root/etc/hotplug.d/iface/98-passwall
-+++ /dev/null
-@@ -1,23 +0,0 @@
--#!/bin/sh
--
--[[ "$ACTION" == "ifup" && $(uci get "passwall.@global[0].enabled") == "1" ]] && [ -f /var/lock/passwall_ready.lock ] && {
--	default_device=$(ip route | grep default | awk -F 'dev ' '{print $2}' | awk '{print $1}')
--	[ "$default_device" == "$DEVICE" ] && {
--		LOCK_FILE_DIR=/var/lock
--		[ ! -d ${LOCK_FILE_DIR} ] && mkdir -p ${LOCK_FILE_DIR}
--		LOCK_FILE="${LOCK_FILE_DIR}/passwall_ifup.lock"
--		if [ -s ${LOCK_FILE} ]; then
--			SPID=$(cat ${LOCK_FILE})
--			if [ -e /proc/${SPID}/status ]; then
--				exit 1
--			fi
--			cat /dev/null > ${LOCK_FILE}
--		fi
--		echo $$ > ${LOCK_FILE}
--		
--		/etc/init.d/passwall restart >/dev/null 2>&1 &
--		echo "passwall: restart when $INTERFACE ifup" > /dev/kmsg
--		
--		rm -rf ${LOCK_FILE}
--	}
--}
-diff --git a/luci-app-passwall/root/etc/init.d/passwall b/luci-app-passwall/root/etc/init.d/passwall
-index c14fb8b..97de59c 100755
---- a/luci-app-passwall/root/etc/init.d/passwall
-+++ b/luci-app-passwall/root/etc/init.d/passwall
-@@ -33,13 +33,7 @@ unlock() {
- }
- 
- boot() {
--	local delay=$(uci -q get ${CONFIG}.@global_delay[0].start_delay || echo 1)
--	if [ "$delay" -gt 0 ]; then
--		$APP_FILE echolog "执行启动延时 $delay 秒后再启动!"
--		sleep $delay
--	fi
--	restart
--	touch ${LOCK_FILE_DIR}/${CONFIG}_ready.lock
-+	$APP_FILE boot
- }
- 
- start() {
 diff --git a/luci-app-passwall/root/etc/uci-defaults/luci-passwall b/luci-app-passwall/root/etc/uci-defaults/luci-passwall
-index 816e28c..39ab320 100755
+index 245e4cd..fbf6ccb 100755
 --- a/luci-app-passwall/root/etc/uci-defaults/luci-passwall
 +++ b/luci-app-passwall/root/etc/uci-defaults/luci-passwall
-@@ -27,22 +27,10 @@ uci -q batch <<-EOF >/dev/null
+@@ -27,6 +27,7 @@ uci -q batch <<-EOF >/dev/null
  	commit uhttpd
  EOF
  
@@ -502,22 +451,6 @@ index 816e28c..39ab320 100755
  touch /etc/config/passwall_show >/dev/null 2>&1
  [ ! -s "/etc/config/passwall" ] && cp -f /usr/share/passwall/0_default_config /etc/config/passwall
  
--use_nft=$(uci -q get passwall.@global_forwarding[0].use_nft || echo "0")
--[ "${use_nft}" = "0" ] && {
--	if [ -z "$(command -v iptables-legacy || command -v iptables)" ] || [ -z "$(command -v ipset)" ] || [ -z "$(dnsmasq --version | grep 'Compile time options:.* ipset')" ]; then
--		[ "$(opkg list-installed | grep "firewall4")" ] && [ "$(opkg list-installed | grep "nftables")" ] && {
--			[ "$(opkg list-installed | grep "kmod\-nft\-socket")" ] && [ "$(opkg list-installed | grep "kmod\-nft\-tproxy")" ] && [ "$(opkg list-installed | grep "kmod\-nft\-nat")" ] && {
--				uci -q set passwall.@global_forwarding[0].use_nft=1
--				uci -q commit passwall
--				sed -i "s#use_nft '0'#use_nft '1'#g" /usr/share/passwall/0_default_config
--			}
--		}
--	fi
--}
--
- global_xray=$(uci -q get passwall.@global_xray[0])
- [ -z "${global_xray}" ] && {
- 	cfgid=$(uci add passwall global_xray)
 diff --git a/luci-app-passwall/root/usr/share/passwall/0_default_config b/luci-app-passwall/root/usr/share/passwall/0_default_config
 index 13ea985..78727c1 100644
 --- a/luci-app-passwall/root/usr/share/passwall/0_default_config
@@ -531,35 +464,6 @@ index 13ea985..78727c1 100644
  
  config global_forwarding
  	option tcp_no_redir_ports 'disable'
-diff --git a/luci-app-passwall/root/usr/share/passwall/app.sh b/luci-app-passwall/root/usr/share/passwall/app.sh
-index b095dc2..eb97bbe 100755
---- a/luci-app-passwall/root/usr/share/passwall/app.sh
-+++ b/luci-app-passwall/root/usr/share/passwall/app.sh
-@@ -1576,6 +1576,16 @@ acl_app() {
- 	}
- }
- 
-+boot() {
-+	local delay=$(config_t_get global_delay start_delay 1)
-+	if [ "$delay" -gt 0 ]; then
-+		echolog "执行启动延时 $delay 秒后再启动!"
-+		sleep $delay && start >/dev/null 2>&1 &
-+	else
-+		start
-+	fi
-+}
-+
- start() {
- 	ulimit -n 65535
- 	start_haproxy
-@@ -1744,4 +1754,7 @@ stop)
- start)
- 	start
- 	;;
-+boot)
-+	boot
-+	;;
- esac
 diff --git a/luci-app-passwall/root/usr/share/passwall/rules/direct_host b/luci-app-passwall/root/usr/share/passwall/rules/direct_host
 index bc16864..b4165b8 100644
 --- a/luci-app-passwall/root/usr/share/passwall/rules/direct_host
@@ -609,22 +513,15 @@ index 04e855d..4d1fdee 100644
 +203.208.39.192/28
 +203.208.40.0/23
 diff --git a/luci-app-passwall/root/usr/share/passwall/rules/proxy_host b/luci-app-passwall/root/usr/share/passwall/rules/proxy_host
-index e9a2bd7..56ac579 100644
+index a70321f..95167f2 100644
 --- a/luci-app-passwall/root/usr/share/passwall/rules/proxy_host
 +++ b/luci-app-passwall/root/usr/share/passwall/rules/proxy_host
-@@ -1,4 +1,3 @@
--bing.com
- sspanel.net
- v2ex.com
- c.mi.com
-@@ -8,7 +7,6 @@ googleapis.cn
+@@ -8,5 +8,4 @@ googleapis.cn
  googleapis.com
  google.com.tw
  google.com.hk
 -gstatic.com
  xn--ngstr-lra8j.com
- 
- #github
 -- 
 2.42.0
 
