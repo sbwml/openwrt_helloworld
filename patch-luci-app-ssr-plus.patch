@@ -1,0 +1,880 @@
+From e0f9cf419ee84763792fecf1d8baa5371be068b1 Mon Sep 17 00:00:00 2001
+From: sbwml <admin@cooluc.com>
+Date: Tue, 9 Apr 2024 14:48:49 +0800
+Subject: [PATCH] patch luci-app-ssr-plus
+
+Signed-off-by: sbwml <admin@cooluc.com>
+---
+ luci-app-ssr-plus/Makefile                    |  33 +++--
+ .../luasrc/controller/shadowsocksr.lua        |   2 +-
+ .../model/cbi/shadowsocksr/advanced.lua       |  39 ------
+ .../luasrc/model/cbi/shadowsocksr/client.lua  |  22 +--
+ .../luasrc/model/cbi/shadowsocksr/status.lua  |   2 +-
+ .../luasrc/view/shadowsocksr/check.htm        |   4 +-
+ .../luasrc/view/shadowsocksr/refresh.htm      |   6 +-
+ .../luasrc/view/shadowsocksr/reset.htm        |   4 +-
+ .../luasrc/view/shadowsocksr/server_list.htm  |   8 +-
+ .../luasrc/view/shadowsocksr/ssrurl.htm       |  22 +--
+ luci-app-ssr-plus/po/zh-cn/ssr-plus.po        |  21 ---
+ .../root/etc/init.d/shadowsocksr              | 131 ++++--------------
+ .../root/etc/ssrplus/mosdns-config.yaml       |  43 ------
+ luci-app-ssr-plus/root/etc/ssrplus/white.list |  40 +++++-
+ luci-app-ssr-plus/root/usr/bin/ssr-monitor    |  10 --
+ 15 files changed, 107 insertions(+), 280 deletions(-)
+ delete mode 100644 luci-app-ssr-plus/root/etc/ssrplus/mosdns-config.yaml
+
+diff --git a/luci-app-ssr-plus/Makefile b/luci-app-ssr-plus/Makefile
+index 82e06b3..17e6a6b 100644
+--- a/luci-app-ssr-plus/Makefile
++++ b/luci-app-ssr-plus/Makefile
+@@ -9,10 +9,9 @@ PKG_CONFIG_DEPENDS:= \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_V2ray \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Xray \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG \
+-	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_MosDNS \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Hysteria \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Tuic_Client \
+-	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadow_TLS \
++	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadow-TLS \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_IPT2Socks \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Kcptun \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_NaiveProxy \
+@@ -25,14 +24,15 @@ PKG_CONFIG_DEPENDS:= \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Server \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Simple_Obfs \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_V2ray_Plugin \
++	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Xray_Plugin \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Libev_Client \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Libev_Server \
+ 	CONFIG_PACKAGE_$(PKG_NAME)_INCLUDE_Trojan
+ 
+-LUCI_TITLE:=SS/SSR/V2Ray/Trojan/NaiveProxy/Tuic/ShadowTLS/Hysteria/Socks5/Tun LuCI interface
++LUCI_TITLE:=SS/SSR/V2Ray/Trojan/NaiveProxy/TUIC/ShadowTLS/Hysteria/Socks5/Tun LuCI interface
+ LUCI_PKGARCH:=all
+ LUCI_DEPENDS:= \
+-	+coreutils +coreutils-base64 +dns2socks +dns2tcp +dnsmasq-full +@PACKAGE_dnsmasq_full_ipset +ipset +kmod-ipt-nat \
++	+coreutils +coreutils-base64 +dns2socks +dns2tcp +dnsmasq-full +ipset +kmod-ipt-nat \
+ 	+ip-full +iptables +iptables-mod-tproxy +lua +lua-neturl +libuci-lua +microsocks \
+ 	+tcping +resolveip +shadowsocksr-libev-ssr-check +uclient-fetch \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_libustream-mbedtls:libustream-mbedtls \
+@@ -43,10 +43,9 @@ LUCI_DEPENDS:= \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_Xray:curl \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_Xray:xray-core \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG:chinadns-ng \
+-	+PACKAGE_$(PKG_NAME)_INCLUDE_MosDNS:mosdns \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_Hysteria:hysteria \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_Tuic_Client:tuic-client \
+-	+PACKAGE_$(PKG_NAME)_INCLUDE_Shadow_TLS:shadow-tls \
++	+PACKAGE_$(PKG_NAME)_INCLUDE_Shadow-TLS:shadow-tls \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_IPT2Socks:ipt2socks \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_Kcptun:kcptun-client \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_NaiveProxy:naiveproxy \
+@@ -58,6 +57,7 @@ LUCI_DEPENDS:= \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Server:shadowsocks-rust-ssserver \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Simple_Obfs:simple-obfs \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_V2ray_Plugin:v2ray-plugin \
++	+PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Xray_Plugin:xray-plugin \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Libev_Client:shadowsocksr-libev-ssr-local \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Libev_Client:shadowsocksr-libev-ssr-redir \
+ 	+PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Libev_Server:shadowsocksr-libev-ssr-server \
+@@ -65,7 +65,6 @@ LUCI_DEPENDS:= \
+ 
+ 
+ define Package/$(PKG_NAME)/config
+-select PACKAGE_luci-lib-ipkg if PACKAGE_$(PKG_NAME)
+ 
+ choice
+ 	prompt "Uclient SSL Lib Selection"
+@@ -83,7 +82,7 @@ endchoice
+ 
+ choice
+ 	prompt "Shadowsocks Client Selection"
+-	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Client if aarch64 || x86_64
++	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Client if aarch64||arm||i386||mips||mipsel||x86_64
+ 	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Libev_Client
+ 
+ 	config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_NONE_Client
+@@ -100,8 +99,8 @@ endchoice
+ 
+ choice
+ 	prompt "Shadowsocks Server Selection"
+-	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Server if aarch64
+-	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Libev_Server if i386||x86_64||arm
++	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Server if aarch64||arm||i386||mips||mipsel||x86_64
++	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Libev_Server
+ 	default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_NONE_Server
+ 
+ 	config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_NONE_Server
+@@ -135,25 +134,21 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG
+ 	bool "Include ChinaDNS-NG"
+ 	default y
+ 
+-config PACKAGE_$(PKG_NAME)_INCLUDE_MosDNS
+-	bool "Include MosDNS"
+-	default y if aarch64||arm||i386||x86_64
+-
+ config PACKAGE_$(PKG_NAME)_INCLUDE_Hysteria
+ 	bool "Include Hysteria"
+ 	select PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG
+ 	default n
+ 
+ config PACKAGE_$(PKG_NAME)_INCLUDE_Tuic_Client
+-	bool "Include Tuic-Client"
++	bool "Include tuic-client"
+ 	select PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG
+ 	select PACKAGE_$(PKG_NAME)_INCLUDE_IPT2Socks
+ 	depends on aarch64||arm||i386||x86_64
+ 	depends on !(TARGET_x86_geode||TARGET_x86_legacy)
+ 	default n
+ 
+-config PACKAGE_$(PKG_NAME)_INCLUDE_Shadow_TLS
+-	bool "Include Shadow-TLS"
++config PACKAGE_$(PKG_NAME)_INCLUDE_Shadow-TLS
++	bool "Include shadow-TLS"
+ 	select PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG
+ 	select PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Rust_Client
+ 	depends on aarch64||arm||x86_64
+@@ -185,6 +180,10 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_V2ray_Plugin
+ 	bool "Include Shadowsocks V2ray Plugin"
+ 	default n
+ 
++config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Xray_Plugin
++	bool "Include Shadowsocks Xray Plugin"
++	default n
++
+ config PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Libev_Client
+ 	bool "Include ShadowsocksR Libev Client"
+ 	default y
+diff --git a/luci-app-ssr-plus/luasrc/controller/shadowsocksr.lua b/luci-app-ssr-plus/luasrc/controller/shadowsocksr.lua
+index 8ceaba7..f381a54 100644
+--- a/luci-app-ssr-plus/luasrc/controller/shadowsocksr.lua
++++ b/luci-app-ssr-plus/luasrc/controller/shadowsocksr.lua
+@@ -7,7 +7,7 @@ function index()
+ 		call("act_reset")
+ 	end
+ 	local page
+-	page = entry({"admin", "services", "shadowsocksr"}, alias("admin", "services", "shadowsocksr", "client"), _("ShadowSocksR Plus+"), 10)
++	page = entry({"admin", "services", "shadowsocksr"}, alias("admin", "services", "shadowsocksr", "client"), _("ShadowSocksR Plus+"), 1)
+ 	page.dependent = true
+ 	page.acl_depends = { "luci-app-ssr-plus" }
+ 	entry({"admin", "services", "shadowsocksr", "client"}, cbi("shadowsocksr/client"), _("SSR Client"), 10).leaf = true
+diff --git a/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/advanced.lua b/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/advanced.lua
+index 0f8cd03..00ef47d 100644
+--- a/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/advanced.lua
++++ b/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/advanced.lua
+@@ -70,45 +70,6 @@ o.default = "https://fastly.jsdelivr.net/gh/QiuSimons/Netflix_IP/NF_only.txt"
+ o.description = translate("Customize Netflix IP Url")
+ o:depends("netflix_enable", "1")
+ 
+-o = s:option(ListValue, "shunt_dns_mode", translate("DNS Query Mode For Shunt Mode"))
+-o:value("1", translate("Use DNS2SOCKS query and cache"))
+-if is_finded("mosdns") then
+-o:value("2", translate("Use MOSDNS query"))
+-end
+-o:depends("netflix_enable", "1")
+-o.default = 1
+-
+-o = s:option(Value, "shunt_dnsserver", translate("Anti-pollution DNS Server For Shunt Mode"))
+-o:value("8.8.4.4:53", translate("Google Public DNS (8.8.4.4)"))
+-o:value("8.8.8.8:53", translate("Google Public DNS (8.8.8.8)"))
+-o:value("208.67.222.222:53", translate("OpenDNS (208.67.222.222)"))
+-o:value("208.67.220.220:53", translate("OpenDNS (208.67.220.220)"))
+-o:value("209.244.0.3:53", translate("Level 3 Public DNS (209.244.0.3)"))
+-o:value("209.244.0.4:53", translate("Level 3 Public DNS (209.244.0.4)"))
+-o:value("4.2.2.1:53", translate("Level 3 Public DNS (4.2.2.1)"))
+-o:value("4.2.2.2:53", translate("Level 3 Public DNS (4.2.2.2)"))
+-o:value("4.2.2.3:53", translate("Level 3 Public DNS (4.2.2.3)"))
+-o:value("4.2.2.4:53", translate("Level 3 Public DNS (4.2.2.4)"))
+-o:value("1.1.1.1:53", translate("Cloudflare DNS (1.1.1.1)"))
+-o:depends("shunt_dns_mode", "1")
+-o.description = translate("Custom DNS Server format as IP:PORT (default: 8.8.4.4:53)")
+-o.datatype = "ip4addrport"
+-
+-o = s:option(ListValue, "shunt_mosdns_dnsserver", translate("Anti-pollution DNS Server"))
+-o:value("tcp://8.8.4.4:53,tcp://8.8.8.8:53", translate("Google Public DNS"))
+-o:value("tcp://208.67.222.222:53,tcp://208.67.220.220:53", translate("OpenDNS"))
+-o:value("tcp://209.244.0.3:53,tcp://209.244.0.4:53", translate("Level 3 Public DNS-1 (209.244.0.3-4)"))
+-o:value("tcp://4.2.2.1:53,tcp://4.2.2.2:53", translate("Level 3 Public DNS-2 (4.2.2.1-2)"))
+-o:value("tcp://4.2.2.3:53,tcp://4.2.2.4:53", translate("Level 3 Public DNS-3 (4.2.2.3-4)"))
+-o:value("tcp://1.1.1.1:53,tcp://1.0.0.1:53", translate("Cloudflare DNS"))
+-o:depends("shunt_dns_mode", "2")
+-o.description = translate("Custom DNS Server for mosdns")
+-
+-o = s:option(Flag, "shunt_mosdns_ipv6", translate("Disable IPv6 In MOSDNS Query Mode (Shunt Mode)"))
+-o:depends("shunt_dns_mode", "2")
+-o.rmempty = false
+-o.default = "0"
+-
+ o = s:option(Flag, "adblock", translate("Enable adblock"))
+ o.rmempty = false
+ 
+diff --git a/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/client.lua b/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/client.lua
+index 3b91739..b24183e 100644
+--- a/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/client.lua
++++ b/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/client.lua
+@@ -10,7 +10,7 @@ local function is_finded(e)
+ 	return luci.sys.exec('type -t -p "%s"' % e) ~= "" and true or false
+ end
+ 
+-m = Map("shadowsocksr", translate("ShadowSocksR Plus+ Settings"), translate("<h3>Support SS/SSR/V2RAY/XRAY/TROJAN/NAIVEPROXY/SOCKS5/TUN etc.</h3>"))
++m = Map("shadowsocksr", translate("ShadowSocksR Plus+ Settings"))
+ m:section(SimpleSection).template = "shadowsocksr/status"
+ 
+ local server_table = {}
+@@ -48,7 +48,7 @@ for _, key in pairs(key_table) do
+ 	o:value(key, server_table[key])
+ end
+ 
+-if uci:get_first("shadowsocksr", 'global', 'netflix_enable', '0') == '1' then
++if uci:get_first("shadowsocksr", 'global', 'netflix_enable', '0') ~= '0' then
+ o = s:option(ListValue, "netflix_server", translate("Netflix Node"))
+ o:value("nil", translate("Disable"))
+ o:value("same", translate("Same as Global Server"))
+@@ -96,9 +96,6 @@ o.default = 1
+ o = s:option(ListValue, "pdnsd_enable", translate("Resolve Dns Mode"))
+ o:value("1", translate("Use DNS2TCP query"))
+ o:value("2", translate("Use DNS2SOCKS query and cache"))
+-if is_finded("mosdns") then
+-o:value("3", translate("Use MOSDNS query (Not Support Oversea Mode)"))
+-end
+ o:value("0", translate("Use Local DNS Service listen port 5335"))
+ o.default = 1
+ 
+@@ -121,21 +118,6 @@ o:depends("pdnsd_enable", "2")
+ o.description = translate("Custom DNS Server format as IP:PORT (default: 8.8.4.4:53)")
+ o.datatype = "ip4addrport"
+ 
+-o = s:option(ListValue, "tunnel_forward_mosdns", translate("Anti-pollution DNS Server"))
+-o:value("tcp://8.8.4.4:53,tcp://8.8.8.8:53", translate("Google Public DNS"))
+-o:value("tcp://208.67.222.222:53,tcp://208.67.220.220:53", translate("OpenDNS"))
+-o:value("tcp://209.244.0.3:53,tcp://209.244.0.4:53", translate("Level 3 Public DNS-1 (209.244.0.3-4)"))
+-o:value("tcp://4.2.2.1:53,tcp://4.2.2.2:53", translate("Level 3 Public DNS-2 (4.2.2.1-2)"))
+-o:value("tcp://4.2.2.3:53,tcp://4.2.2.4:53", translate("Level 3 Public DNS-3 (4.2.2.3-4)"))
+-o:value("tcp://1.1.1.1:53,tcp://1.0.0.1:53", translate("Cloudflare DNS"))
+-o:depends("pdnsd_enable", "3")
+-o.description = translate("Custom DNS Server for mosdns")
+-
+-o = s:option(Flag, "mosdns_ipv6", translate("Disable IPv6 in MOSDNS query mode"))
+-o:depends("pdnsd_enable", "3")
+-o.rmempty = false
+-o.default = "0"
+-
+ if is_finded("chinadns-ng") then
+ 	o = s:option(Value, "chinadns_forward", translate("Domestic DNS Server"))
+ 	o:value("", translate("Disable ChinaDNS-NG"))
+diff --git a/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/status.lua b/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/status.lua
+index a095d44..1400c91 100644
+--- a/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/status.lua
++++ b/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/status.lua
+@@ -88,7 +88,7 @@ if Process_list:find("ssr.server") then
+ 	server_run = 1
+ end
+ 
+-if Process_list:find("ssrplus/bin/dns2tcp") or Process_list:find("ssrplus/bin/mosdns") or (Process_list:find("ssrplus.dns") and Process_list:find("dns2socks.127.0.0.1.*127.0.0.1.5335")) then
++if Process_list:find("ssrplus/bin/dns2tcp") or (Process_list:find("ssrplus.dns") and Process_list:find("dns2socks.127.0.0.1.*127.0.0.1.5335")) then
+ 	pdnsd_run = 1
+ end
+ 
+diff --git a/luci-app-ssr-plus/luasrc/view/shadowsocksr/check.htm b/luci-app-ssr-plus/luasrc/view/shadowsocksr/check.htm
+index 4a16adc..5f6a673 100644
+--- a/luci-app-ssr-plus/luasrc/view/shadowsocksr/check.htm
++++ b/luci-app-ssr-plus/luasrc/view/shadowsocksr/check.htm
+@@ -13,9 +13,9 @@
+ 			if (s)
+ 			{
+ 				if (rv.ret=="0")
+-				s.innerHTML ="<font style=\'color:green\'>"+"<%:Connect OK%>"+"</font>";
++				s.innerHTML ="<font color='green'>"+"<%:Connect OK%>"+"</font>";
+ 				else
+-				s.innerHTML ="<font style=\'color:red\'>"+"<%:Connect Error%>"+"</font>";
++				s.innerHTML ="<font color='red'>"+"<%:Connect Error%>"+"</font>";
+ 			}
+ 				btn.disabled = false;
+ 				btn.value    = '<%:Check Connect%>';
+diff --git a/luci-app-ssr-plus/luasrc/view/shadowsocksr/refresh.htm b/luci-app-ssr-plus/luasrc/view/shadowsocksr/refresh.htm
+index ea4113d..da89fd5 100644
+--- a/luci-app-ssr-plus/luasrc/view/shadowsocksr/refresh.htm
++++ b/luci-app-ssr-plus/luasrc/view/shadowsocksr/refresh.htm
+@@ -15,13 +15,13 @@
+ 				switch (rv.ret)
+ 				{
+ 					case 0:
+-						s.innerHTML ="<font style=\'color:green\'>"+"<%:Refresh OK!%> "+"<%:Total Records:%>"+rv.retcount+"</font>";
++						s.innerHTML ="<font color='green'>"+"<%:Refresh OK!%> "+"<%:Total Records:%>"+rv.retcount+"</font>";
+ 						break;
+ 					case 1:
+-						s.innerHTML ="<font style=\'color:green\'>"+"<%:No new data!%> "+"</font>";
++						s.innerHTML ="<font color='green'>"+"<%:No new data!%> "+"</font>";
+ 						break;
+ 					default:
+-						s.innerHTML ="<font style=\'color:red\'>"+"<%:Refresh Error!%> "+"</font>";
++						s.innerHTML ="<font color='red'>"+"<%:Refresh Error!%> "+"</font>";
+ 						break;
+ 				}
+ 			}
+diff --git a/luci-app-ssr-plus/luasrc/view/shadowsocksr/reset.htm b/luci-app-ssr-plus/luasrc/view/shadowsocksr/reset.htm
+index ff0c486..1882ac5 100644
+--- a/luci-app-ssr-plus/luasrc/view/shadowsocksr/reset.htm
++++ b/luci-app-ssr-plus/luasrc/view/shadowsocksr/reset.htm
+@@ -7,7 +7,7 @@
+ 			return false;
+ 		}
+ 		if (reset != "reset") {
+-			s.innerHTML = "<font style=\'color:red\'><%:The content entered is incorrect!%></font>";
++			s.innerHTML = "<font color='red'><%:The content entered is incorrect!%></font>";
+ 			return false;
+ 		}
+ 		btn.disabled = true;
+@@ -15,7 +15,7 @@
+ 		murl=dataname;
+ 		XHR.get('<%=luci.dispatcher.build_url("admin", "services", "shadowsocksr","reset")%>', { set:murl }, function(x,rv) {
+ 			btn.value    = '<%:Reset complete%>';
+-			s.innerHTML = "<font style=\'color:green\'><%:Reset complete%></font>";
++			s.innerHTML = "<font color='green'><%:Reset complete%></font>";
+ 		});
+ 		return false;
+ 	}
+diff --git a/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_list.htm b/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_list.htm
+index d0b77f1..259cb7f 100644
+--- a/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_list.htm
++++ b/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_list.htm
+@@ -18,7 +18,7 @@
+ 				const wsPath = wsPaths[index];
+ 				const tls = tlss[index];
+ 				if (!dom) res()
+-				port.innerHTML = '<font style=\"color:#0072c3\">connect</font>';
++				port.innerHTML = '<font color="#0072c3">connect</font>';
+ 				XHR.get('<%=luci.dispatcher.build_url("admin/services/shadowsocksr/ping")%>', {
+ 					index,
+ 					domain: dom.getAttribute("hint"),
+@@ -34,11 +34,11 @@
+ 						if (result.ping < 200) col = '#ff7700';
+ 						if (result.ping < 100) col = '#249400';
+ 					}
+-					dom.innerHTML = `<font style=\"color:${col}\">${(result.ping ? result.ping : "--") + " ms"}</font>`
++					dom.innerHTML = `<font color="${col}">${(result.ping ? result.ping : "--") + " ms"}</font>`
+ 					if (result.socket) {
+-						port.innerHTML = '<font style=\"color:#249400\">ok</font>';
++						port.innerHTML = '<font color="#249400">ok</font>';
+ 					} else {
+-						port.innerHTML = '<font style=\"color:#ff0000\">fail</font>';
++						port.innerHTML = '<font color="#ff0000">fail</font>';
+ 					}
+ 					res();
+ 				});
+diff --git a/luci-app-ssr-plus/luasrc/view/shadowsocksr/ssrurl.htm b/luci-app-ssr-plus/luasrc/view/shadowsocksr/ssrurl.htm
+index 479d7e2..5eecbee 100644
+--- a/luci-app-ssr-plus/luasrc/view/shadowsocksr/ssrurl.htm
++++ b/luci-app-ssr-plus/luasrc/view/shadowsocksr/ssrurl.htm
+@@ -69,9 +69,9 @@ function export_ssr_url(btn, urlname, sid) {
+ 	textarea.select();
+ 	try {
+ 		document.execCommand("copy"); // Security exception may be thrown by some browsers.
+-		s.innerHTML = "<font style=\'color:green\'><%:Copy SSR to clipboard successfully.%></font>";
++		s.innerHTML = "<font color='green'><%:Copy SSR to clipboard successfully.%></font>";
+ 	} catch (ex) {
+-		s.innerHTML = "<font style=\'color:red\'><%:Unable to copy SSR to clipboard.%></font>";
++		s.innerHTML = "<font color='red'><%:Unable to copy SSR to clipboard.%></font>";
+ 	} finally {
+ 		document.body.removeChild(textarea);
+ 	}
+@@ -83,7 +83,7 @@ function import_ssr_url(btn, urlname, sid) {
+ 		if (!s) return false;
+ 		var ssrurl = prompt("<%:Paste sharing link here%>", "");
+ 		if (ssrurl == null || ssrurl == "") {
+-			s.innerHTML = "<font style=\'color:red\'><%:User cancelled.%></font>";
++			s.innerHTML = "<font color='red'><%:User cancelled.%></font>";
+ 			return false;
+ 		}
+ 		s.innerHTML = "";
+@@ -118,7 +118,7 @@ function import_ssr_url(btn, urlname, sid) {
+ 			document.getElementsByName('cbid.shadowsocksr.' + sid + '.insecure')[0].checked = params.get("insecure") ? true : false;
+ 			document.getElementsByName('cbid.shadowsocksr.' + sid + '.alias')[0].value = url.hash ? decodeURIComponent(url.hash.slice(1)) : "";
+ 
+-			s.innerHTML = "<font style=\'color:green\'><%:Import configuration information successfully.%></font>";
++			s.innerHTML = "<font color='green'><%:Import configuration information successfully.%></font>";
+ 			return false;
+ 		case "ss":
+ 			var url0, param = "";
+@@ -164,7 +164,7 @@ function import_ssr_url(btn, urlname, sid) {
+ 				if (param != undefined) {
+ 					document.getElementsByName('cbid.shadowsocksr.' + sid + '.alias')[0].value = decodeURI(param);
+ 				}
+-				s.innerHTML = "<font style=\'color:green\'><%:Import configuration information successfully.%></font>";
++				s.innerHTML = "<font color='green'><%:Import configuration information successfully.%></font>";
+ 			} else {
+ 				var sstr = b64decsafe(url0);
+ 				document.getElementsByName('cbid.shadowsocksr.' + sid + '.type')[0].value = ssu[0];
+@@ -179,7 +179,7 @@ function import_ssr_url(btn, urlname, sid) {
+ 				if (param != undefined) {
+ 					document.getElementsByName('cbid.shadowsocksr.' + sid + '.alias')[0].value = decodeURI(param);
+ 				}
+-				s.innerHTML = "<font style=\'color:green\'><%:Import configuration information successfully.%></font>";
++				s.innerHTML = "<font color='green'><%:Import configuration information successfully.%></font>";
+ 			}
+ 			return false;
+ 		case "ssr":
+@@ -212,7 +212,7 @@ function import_ssr_url(btn, urlname, sid) {
+ 			document.getElementsByName('cbid.shadowsocksr.' + sid + '.protocol_param')[0].value = dictvalue(pdict, 'protoparam');
+ 			var rem = pdict['remarks'];
+ 			if (typeof (rem) != 'undefined' && rem != '' && rem.length > 0) document.getElementsByName('cbid.shadowsocksr.' + sid + '.alias')[0].value = b64decutf8safe(rem);
+-			s.innerHTML = "<font style=\'color:green\'><%:Import configuration information successfully.%></font>";
++			s.innerHTML = "<font color='green'><%:Import configuration information successfully.%></font>";
+ 			return false;
+ 		case "trojan":
+ 			try {
+@@ -234,7 +234,7 @@ function import_ssr_url(btn, urlname, sid) {
+ 			document.getElementsByName('cbid.shadowsocksr.' + sid + '.tls')[0].dispatchEvent(event);
+ 			document.getElementsByName('cbid.shadowsocksr.' + sid + '.tls_host')[0].value = url.searchParams.get("sni");
+ 
+-			s.innerHTML = "<font style=\'color:green\'><%:Import configuration information successfully.%></font>";
++			s.innerHTML = "<font color='green'><%:Import configuration information successfully.%></font>";
+ 			return false;
+ 		case "vmess":
+ 			var sstr = b64DecodeUnicode(ssu[1]);
+@@ -287,7 +287,7 @@ function import_ssr_url(btn, urlname, sid) {
+ 			}
+ 			document.getElementsByName('cbid.shadowsocksr.' + sid + '.mux')[0].checked = true;
+ 			document.getElementsByName('cbid.shadowsocksr.' + sid + '.mux')[0].dispatchEvent(event);
+-			s.innerHTML = "<font style=\'color:green\'><%:Import configuration information successfully.%></font>";
++			s.innerHTML = "<font color='green'><%:Import configuration information successfully.%></font>";
+ 			return false;
+ 		case "vless":
+ 			try {
+@@ -357,10 +357,10 @@ function import_ssr_url(btn, urlname, sid) {
+ 				}
+ 				break;
+ 			}
+-			s.innerHTML = "<font style=\'color:green\'><%:Import configuration information successfully.%></font>";
++			s.innerHTML = "<font color='green'><%:Import configuration information successfully.%></font>";
+ 			return false;
+ 		default:
+-			s.innerHTML = "<font style=\'color:red\'><%:Invalid format.%></font>";
++			s.innerHTML = "<font color='red'><%:Invalid format.%></font>";
+ 			return false;
+ 		}
+ 	}
+diff --git a/luci-app-ssr-plus/po/zh-cn/ssr-plus.po b/luci-app-ssr-plus/po/zh-cn/ssr-plus.po
+index 632b5c9..cba9707 100644
+--- a/luci-app-ssr-plus/po/zh-cn/ssr-plus.po
++++ b/luci-app-ssr-plus/po/zh-cn/ssr-plus.po
+@@ -552,27 +552,6 @@ msgstr "使用 DNS2TCP 查询"
+ msgid "Use DNS2SOCKS query and cache"
+ msgstr "使用 DNS2SOCKS 查询并缓存"
+ 
+-msgid "Use MOSDNS query (Not Support Oversea Mode)"
+-msgstr "使用 MOSDNS 查询 (不支持海外用户回国模式)"
+-
+-msgid "Disable IPv6 in MOSDNS query mode"
+-msgstr "禁止 MOSDNS 返回 IPv6 记录"
+-
+-msgid "DNS Query Mode For Shunt Mode"
+-msgstr "分流模式下的 DNS 查询模式"
+-
+-msgid "Anti-pollution DNS Server For Shunt Mode"
+-msgstr "分流模式下的访问国外域名 DNS 服务器"
+-
+-msgid "Use MOSDNS query"
+-msgstr "使用 MOSDNS 查询"
+-
+-msgid "Custom DNS Server for mosdns"
+-msgstr "MOSDNS 自定义 DNS 服务器"
+-
+-msgid "Disable IPv6 In MOSDNS Query Mode (Shunt Mode)"
+-msgstr "禁止 MOSDNS 返回 IPv6 记录 (分流模式)"
+-
+ msgid "DNS Server IP:Port"
+ msgstr "DNS 服务器 IP:Port"
+ 
+diff --git a/luci-app-ssr-plus/root/etc/init.d/shadowsocksr b/luci-app-ssr-plus/root/etc/init.d/shadowsocksr
+index 9d22e62..6cfad51 100755
+--- a/luci-app-ssr-plus/root/etc/init.d/shadowsocksr
++++ b/luci-app-ssr-plus/root/etc/init.d/shadowsocksr
+@@ -178,23 +178,17 @@ ln_start_bin() {
+ 	${file_func:-echolog "  - ${ln_name}"} "$@" >/dev/null 2>&1 &
+ }
+ 
+-add_dns_into_ipset() {
+-	case "$1" in
+-	gfw) ipset add gfwlist ${2%:*} 2>/dev/null ;;
+-	oversea) ipset add oversea ${2%:*} 2>/dev/null ;;
+-	*) ipset add ss_spec_wan_ac ${2%:*} nomatch 2>/dev/null ;;
+-	esac
+-}
+-
+ start_dns() {
+ 	local ssrplus_dns="$(uci_get_by_type global pdnsd_enable 0)"
+ 	local dnsserver="$(uci_get_by_type global tunnel_forward 8.8.4.4:53)"
+ 	local run_mode="$(uci_get_by_type global run_mode)"
+ 
+ 	if [ "$ssrplus_dns" != "0" ]; then
+-		if [ -n "$dnsserver" ]; then
+-			add_dns_into_ipset $run_mode $dnsserver
+-		fi
++		case "$run_mode" in
++		gfw) ipset add gfwlist ${dnsserver%:*} 2>/dev/null ;;
++		oversea) ipset add oversea ${dnsserver%:*} 2>/dev/null ;;
++		*) ipset add ss_spec_wan_ac ${dnsserver%:*} nomatch 2>/dev/null ;;
++		esac
+ 		case "$ssrplus_dns" in
+ 		1)
+ 			ln_start_bin $(first_type dns2tcp) dns2tcp -L 127.0.0.1#$dns_port -R ${dnsserver/:/#}
+@@ -205,26 +199,6 @@ start_dns() {
+ 			ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_dns_port $dnsserver 127.0.0.1:$dns_port -q
+ 			pdnsd_enable_flag=2
+ 			;;
+-		3)
+-			local mosdns_ipv6="$(uci_get_by_type global mosdns_ipv6)"
+-			local mosdns_dnsserver="$(uci_get_by_type global tunnel_forward_mosdns)"
+-			output=$(for i in $(echo $mosdns_dnsserver | sed "s/,/ /g"); do
+-				dnsserver=${i%:*}
+-				dnsserver=${i##*/}
+-				add_dns_into_ipset $run_mode $dnsserver
+-				echo "            - addr: $i"
+-				echo "              enable_pipeline: true"
+-			done)
+-
+-			awk -v line=14 -v text="$output" 'NR == line+1 {print text} 1' /etc/ssrplus/mosdns-config.yaml | sed "s/DNS_PORT/$dns_port/g" > $TMP_PATH/mosdns-config.yaml
+-			if [ "$mosdns_ipv6" == "0" ]; then
+-				sed -i "s/DNS_MODE/main_sequence_with_IPv6/g" $TMP_PATH/mosdns-config.yaml
+-			else
+-				sed -i "s/DNS_MODE/main_sequence_disable_IPv6/g" $TMP_PATH/mosdns-config.yaml
+-			fi
+-			ln_start_bin $(first_type mosdns) mosdns start -c $TMP_PATH/mosdns-config.yaml
+-			pdnsd_enable_flag=3
+-			;;
+ 		esac
+ 
+ 		if [ "$run_mode" = "router" ]; then
+@@ -479,33 +453,6 @@ start_udp() {
+ 	esac
+ }
+ 
+-shunt_dns_command() {
+-	local shunt_dns_mode="$(uci_get_by_type global shunt_dns_mode)"
+-	local shunt_dnsserver="$(uci_get_by_type global shunt_dnsserver)"
+-	case "$shunt_dns_mode" in
+-	1)
+-		ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_port $shunt_dnsserver 127.0.0.1:$tmp_shunt_dns_port -q
+-		;;
+-	2)
+-		local shunt_mosdns_ipv6="$(uci_get_by_type global shunt_mosdns_ipv6)"
+-		local shunt_mosdns_dnsserver="$(uci_get_by_type global shunt_mosdns_dnsserver)"
+-		output=$(for i in $(echo $shunt_mosdns_dnsserver | sed "s/,/ /g"); do
+-			echo "            - addr: $i"
+-			echo "              socks5: \"127.0.0.1:$tmp_port\""
+-			echo "              enable_pipeline: true"
+-		done)
+-		awk -v line=14 -v text="$output" 'NR == line+1 {print text} 1' /etc/ssrplus/mosdns-config.yaml | sed "s/DNS_PORT/$tmp_shunt_dns_port/g" > $TMP_PATH/mosdns-config-shunt.yaml
+-
+-		if [ "$shunt_mosdns_ipv6" == "0" ]; then
+-			sed -i "s/DNS_MODE/main_sequence_with_IPv6/g" $TMP_PATH/mosdns-config-shunt.yaml
+-		else
+-			sed -i "s/DNS_MODE/main_sequence_disable_IPv6/g" $TMP_PATH/mosdns-config-shunt.yaml
+-		fi
+-		ln_start_bin $(first_type mosdns) mosdns start -c $TMP_PATH/mosdns-config-shunt.yaml
+-		;;
+-	esac
+-}
+-
+ start_shunt() {
+ 	local type=$(uci_get_by_name $SHUNT_SERVER type)
+ 	case "$type" in
+@@ -519,14 +466,14 @@ start_shunt() {
+ 			local tmp_port=$tmp_shunt_local_port
+ 			ln_start_bin $(first_type ${type}local ${type}-local) ${type}-local -c $shunt_dns_config_file
+ 		fi
+-		shunt_dns_command
++		ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_port 8.8.8.8:53 127.0.0.1:$tmp_shunt_dns_port -q
+ 		echolog "shunt:$(get_name $type) Started!"
+ 		;;
+ 	v2ray)
+ 		local tmp_port=${tmp_local_port:-$tmp_shunt_local_port}
+ 		gen_config_file $SHUNT_SERVER $type 3 $tmp_shunt_port $tmp_port
+ 		ln_start_bin $(first_type xray v2ray) v2ray run -config $shunt_config_file
+-		shunt_dns_command
++		ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_port 8.8.8.8:53 127.0.0.1:$tmp_shunt_dns_port -q
+ 		echolog "shunt:$($(first_type xray v2ray) version | head -1) Started!"
+ 		;;
+ 	trojan)
+@@ -538,7 +485,7 @@ start_shunt() {
+ 			local tmp_port=$tmp_shunt_local_port
+ 			ln_start_bin $(first_type trojan) $type --config $shunt_dns_config_file
+ 		fi
+-		shunt_dns_command
++		ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_port 8.8.8.8:53 127.0.0.1:$tmp_shunt_dns_port -q
+ 		echolog "shunt:$($(first_type trojan) --version 2>&1 | head -1) Started!"
+ 		;;
+ 	naiveproxy)
+@@ -550,7 +497,7 @@ start_shunt() {
+ 			local tmp_port=$tmp_shunt_local_port
+ 			ln_start_bin $(first_type naive) naive --config $shunt_dns_config_file
+ 		fi
+-		shunt_dns_command
++		ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_port 8.8.8.8:53 127.0.0.1:$tmp_shunt_dns_port -q
+ 		echolog "shunt:$($(first_type "naive") --version 2>&1 | head -1) Started!"
+ 		redir_udp=0
+ 		;;
+@@ -563,7 +510,7 @@ start_shunt() {
+ 			gen_config_file $SHUNT_SERVER $type 3 $tmp_shunt_port $tmp_port
+ 		fi
+ 		ln_start_bin $(first_type hysteria) hysteria client --config $shunt_config_file
+-		shunt_dns_command
++		ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_port 8.8.8.8:53 127.0.0.1:$tmp_shunt_dns_port -q
+ 		echolog "shunt:$($(first_type hysteria) version | grep Version | awk '{print "Hysteria2: " $2}') Started!"
+ 		;;
+ 	tuic)
+@@ -575,7 +522,7 @@ start_shunt() {
+ 		[ -n "$tmp_local_port" ] && tmp_port=$tmp_local_port || tmp_port=$tmp_shunt_local_port
+ 		gen_config_file $SHUNT_SERVER $type 3 $tmp_port		# make a tuic socks :304
+ 		ln_start_bin $(first_type tuic-client) tuic-client --config $shunt_dns_config_file
+-		shunt_dns_command
++		ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_port 8.8.8.8:53 127.0.0.1:$tmp_shunt_dns_port -q
+ 		echolog "Netflix Separated Shunt Server:tuic-client $($(first_type tuic-client) --version) Started!"
+ 		# FIXME: ipt2socks cannot handle udp reply from tuic
+ 		#redir_udp=0
+@@ -585,7 +532,7 @@ start_shunt() {
+ 		gen_config_file $SHUNT_SERVER $type 3 "10${tmp_shunt_port}" $tmp_port chain/$tmp_shunt_port #make a redir:303 and a socks:304
+ 		#echo "debug \$tmp_port=$tmp_port, \$tmp_shunt_port=${tmp_shunt_port},  \$tmp_shunt_local_port=$tmp_shunt_local_port"
+ 		ln_start_bin $(first_type shadow-tls) shadow-tls config --config $chain_config_file
+-		shunt_dns_command
++		ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:"${tmp_port}" 8.8.8.8:53 127.0.0.1:$tmp_shunt_dns_port -q
+ 		local chain_type=$(uci_get_by_name $SHUNT_SERVER chain_type)
+ 		case ${chain_type} in
+ 		vmess)
+@@ -611,7 +558,7 @@ start_shunt() {
+ 	# 		local tmp_port=$tmp_shunt_local_port
+ 	# 		ln_start_bin $(first_type microsocks) microsocks -i 127.0.0.1 -p $tmp_port shunt-dns-ssr-plus
+ 	# 	fi
+-	# 	shunt_dns_command
++	# 	ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_port 8.8.8.8:53 127.0.0.1:$tmp_shunt_dns_port -q
+ 	# 	echolog "shunt:$type REDIRECT/TPROXY Started!"
+ 	# 	;;
+ 	*)
+@@ -623,7 +570,7 @@ start_shunt() {
+ 			local tmp_port=$tmp_shunt_local_port
+ 			ln_start_bin $(first_type microsocks) microsocks -i 127.0.0.1 -p $tmp_port shunt-dns-ssr-plus
+ 		fi
+-		shunt_dns_command
++		ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_port 8.8.8.8:53 127.0.0.1:$tmp_shunt_dns_port -q
+ 		echolog "shunt:$type REDIRECT/TPROXY Started!"
+ 		;;
+ 	esac
+@@ -922,11 +869,6 @@ start_server() {
+ 	server_service() {
+ 		[ "$(uci_get_by_name $1 enable 0)" == "0" ] && return 1
+ 		let server_count=server_count+1
+-		if [ "$server_count" == "1" ]; then
+-			if ! (iptables-save -t filter | grep SSR-SERVER-RULE >/dev/null); then
+-				iptables -N SSR-SERVER-RULE && iptables -t filter -I INPUT -j SSR-SERVER-RULE
+-			fi
+-		fi
+ 		local type=$(uci_get_by_name $1 type)
+ 		case "$type" in
+ 		ss | ssr)
+@@ -940,32 +882,23 @@ start_server() {
+ 			echolog "Server:Socks5 Server$server_count Started!"
+ 			;;
+ 		esac
+-		iptables -t filter -A SSR-SERVER-RULE -p tcp --dport $(uci_get_by_name $1 server_port) -j ACCEPT
+-		iptables -t filter -A SSR-SERVER-RULE -p udp --dport $(uci_get_by_name $1 server_port) -j ACCEPT
+-		return 0
+-	}
+-	gen_serv_include() {
+-		local FWI=$(uci get firewall.shadowsocksr.path 2>/dev/null)
+-		[ -n "$FWI" ] || return 0
+-		if [ ! -f $FWI ]; then
+-			echo '#!/bin/sh' >$FWI
++		ssr_server_port=$(uci show shadowsocksr | grep 'server_config.*server_port' | awk -F"'" '{print $2}' | tr "\n" " ")
++		if [ -n "$ssr_server_port" ]; then
++			uci -q delete firewall.shadowsocksr_server
++			uci set firewall.shadowsocksr_server=rule
++			uci set firewall.shadowsocksr_server.name="shadowsocksr_server"
++			uci set firewall.shadowsocksr_server.target="ACCEPT"
++			uci set firewall.shadowsocksr_server.src="wan"
++			uci set firewall.shadowsocksr_server.dest_port="$ssr_server_port"
++			uci set firewall.shadowsocksr_server.enabled="1"
++			uci commit firewall
++			/etc/init.d/firewall reload >/dev/null 2>&1
+ 		fi
+-		extract_rules() {
+-			echo "*filter"
+-			iptables-save -t filter | grep SSR-SERVER-RULE | sed -e "s/^-A INPUT/-I INPUT/"
+-			echo 'COMMIT'
+-		}
+-		cat <<-EOF >>$FWI
+-			iptables-save -c | grep -v "SSR-SERVER" | iptables-restore -c
+-			iptables-restore -n <<-EOT
+-			$(extract_rules)
+-			EOT
+-		EOF
++		return 0
+ 	}
+ 
+ 	config_load $NAME
+ 	config_foreach server_service server_config
+-	gen_serv_include
+ 	return 0
+ }
+ 
+@@ -1098,12 +1031,6 @@ stop() {
+ 	unlock
+ 	set_lock
+ 	/usr/bin/ssr-rules -f
+-	local srulecount=$(iptables -L | grep SSR-SERVER-RULE | wc -l)
+-	if [ $srulecount -gt 0 ]; then
+-		iptables -F SSR-SERVER-RULE
+-		iptables -t filter -D INPUT -j SSR-SERVER-RULE
+-		iptables -X SSR-SERVER-RULE 2>/dev/null
+-	fi
+ 	if [ -z "$switch_server" ]; then
+ 		$PS -w | grep -v "grep" | grep ssr-switch | awk '{print $1}' | xargs kill -9 >/dev/null 2>&1 &
+ 		rm -f /var/lock/ssr-switch.lock
+@@ -1114,7 +1041,7 @@ stop() {
+ 	( \
+ 		# Graceful kill first, so programs have the chance to stop its subprocesses
+ 		$PS -w | grep -v "grep" | grep "$TMP_PATH" | awk '{print $1}' | xargs kill >/dev/null 2>&1 ; \
+-		sleep 3s; \
++		sleep 1s; \
+ 		# Force kill hanged programs
+ 		$PS -w | grep -v "grep" | grep "$TMP_PATH" | awk '{print $1}' | xargs kill -9 >/dev/null 2>&1 ; \
+ 	)
+@@ -1132,6 +1059,9 @@ stop() {
+ 		rm -rf /tmp/dnsmasq.d/dnsmasq-ssrplus.conf $TMP_DNSMASQ_PATH $TMP_PATH/*-ssr-*.json $TMP_PATH/ssr-server*.json
+ 		/etc/init.d/dnsmasq restart >/dev/null 2>&1
+ 	fi
++	uci -q delete firewall.shadowsocksr_server
++	uci commit firewall
++	/etc/init.d/firewall reload >/dev/null 2>&1
+ 	del_cron
+ 	unset_lock
+ }
+@@ -1158,7 +1088,6 @@ reset() {
+ 		set shadowsocksr.@global[0].switch_timeout='5'
+ 		set shadowsocksr.@global[0].switch_try_count='3'
+ #		set shadowsocksr.@global[0].default_packet_encoding='xudp'
+-		set shadowsocksr.@global[0].shunt_dns='1'
+ 		set shadowsocksr.@global[0].gfwlist_url='https://fastly.jsdelivr.net/gh/YW5vbnltb3Vz/domain-list-community@release/gfwlist.txt'
+ 		set shadowsocksr.@global[0].chnroute_url='https://ispip.clang.cn/all_cn.txt'
+ 		set shadowsocksr.@global[0].nfip_url='https://fastly.jsdelivr.net/gh/QiuSimons/Netflix_IP/NF_only.txt'
+diff --git a/luci-app-ssr-plus/root/etc/ssrplus/mosdns-config.yaml b/luci-app-ssr-plus/root/etc/ssrplus/mosdns-config.yaml
+deleted file mode 100644
+index a0b9f5c..0000000
+--- a/luci-app-ssr-plus/root/etc/ssrplus/mosdns-config.yaml
++++ /dev/null
+@@ -1,43 +0,0 @@
+-log:
+-    level: info
+-plugins:
+-    - tag: lazy_cache
+-      type: cache
+-      args:
+-        size: 8000
+-        lazy_cache_ttl: 86400
+-
+-    - tag: forward_google
+-      type: forward
+-      args:
+-        concurrent: 2
+-        upstreams:
+-
+-    - tag: main_sequence_disable_IPv6
+-      type: sequence
+-      args:
+-        - exec: $lazy_cache
+-        - exec: prefer_ipv4
+-        - exec: $forward_google
+-        - matches: 
+-          - qtype 28 65
+-          exec: reject 0
+-
+-    - tag: main_sequence_with_IPv6
+-      type: sequence
+-      args:
+-        - exec: $lazy_cache
+-        - exec: $forward_google
+-
+-    - tag: udp_server
+-      type: udp_server
+-      args:
+-        entry: DNS_MODE
+-        listen: 0.0.0.0:DNS_PORT
+-      
+-    - tag: tcp_server
+-      type: tcp_server
+-      args:
+-        entry: DNS_MODE
+-        listen: 0.0.0.0:DNS_PORT
+-
+diff --git a/luci-app-ssr-plus/root/etc/ssrplus/white.list b/luci-app-ssr-plus/root/etc/ssrplus/white.list
+index 9055fcb..30899a9 100644
+--- a/luci-app-ssr-plus/root/etc/ssrplus/white.list
++++ b/luci-app-ssr-plus/root/etc/ssrplus/white.list
+@@ -1,7 +1,37 @@
+-bilibili.com
+-bilibili.cn
+-bilivideo.com
+-bilivideo.cn
++aaplimg.com
++account.synology.com
++apple-cloudkit.com
++apple.co
++apple.com
++apple.com.cn
++appstore.com
+ biliapi.com
+ biliapi.net
+-apple.com
+\ No newline at end of file
++bilibili.cn
++bilibili.com
++bilivideo.cn
++bilivideo.com
++bing.com
++cdn-apple.com
++checkip.dyndns.org
++checkip.synology.com
++checkipv6.synology.com
++checkport.synology.com
++crashlytics.com
++ddns.synology.com
++gh.cooluc.com
++icloud-content.com
++icloud.com
++icloud.com.cn
++images-cn.ssl-images-amazon.com
++mirrorlist.centos.org
++mzstatic.com
++office365.com
++officecdn-microsoft-com.akamaized.net
++teamviewer.com
++whatismyip.akamai.com
++windows.com
++windowsupdate.com
++worldbank.org
++worldscientific.com
++www-cdn.icloud.com.akadns.net
+diff --git a/luci-app-ssr-plus/root/usr/bin/ssr-monitor b/luci-app-ssr-plus/root/usr/bin/ssr-monitor
+index f637d50..fb9ed57 100755
+--- a/luci-app-ssr-plus/root/usr/bin/ssr-monitor
++++ b/luci-app-ssr-plus/root/usr/bin/ssr-monitor
+@@ -104,16 +104,6 @@ while [ "1" == "1" ]; do #死循环
+ 			ln_start_bin $(first_type microsocks) microsocks -i 127.0.0.1 -p $tmp_dns_port ssrplus-dns
+ 			ln_start_bin $(first_type dns2socks) dns2socks 127.0.0.1:$tmp_dns_port $dnsserver 127.0.0.1:$dns_port -q
+ 		fi
+-	#mosdns
+-	elif [ "$pdnsd_process" -eq 3 ]; then
+-		icount=$(busybox ps -w | grep $TMP_BIN_PATH/mosdns | grep -v grep | wc -l)
+-		if [ "$icount" -lt 1 ]; then #如果进程挂掉就重启它
+-			logger -t "$NAME" "mosdns tunnel error.restart!"
+-			echolog "mosdns tunnel error.restart!"
+-			dnsserver=$(uci_get_by_type global tunnel_forward 8.8.4.4:53)
+-			kill -9 $(busybox ps -w | grep $TMP_BIN_PATH/mosdns | grep -v grep | awk '{print $1}') >/dev/null 2>&1
+-			ln_start_bin $(first_type mosdns) mosdns start -c /etc/mosdns/config.yaml
+-		fi
+ 	fi
+ 	#chinadns-ng
+ 	if [ "$(uci -q get "dhcp.@dnsmasq[0]._unused_ssrp_changed")" = "1" ]; then
+-- 
+2.42.0
+
