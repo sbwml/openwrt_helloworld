@@ -91,8 +91,16 @@ msgstr "TLS 主机名"
 msgid "allowInsecure"
 msgstr "允许不安全连接"
 
-msgid "Concurrency"
-msgstr "最大并发连接数"
+
+msgid "concurrency"
+msgstr "TCP 最大并发连接数"
+
+msgid "xudpConcurrency"
+msgstr "UDP 最大并发连接数"
+
+msgid "xudpProxyUDP443"
+msgstr "对被代理的 UDP/443 流量处理方式"
+
 
 msgid "custom_tcpcongestion"
 msgstr "连接服务器节点的 TCP 拥塞控制算法"
