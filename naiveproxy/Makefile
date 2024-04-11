@@ -4,6 +4,15 @@ PKG_NAME:=naiveproxy
 PKG_VERSION:=123.0.6312.40-1
 PKG_RELEASE:=1
 
+# intel 80386 & riscv64
+ifeq ($(ARCH_PACKAGES),i386_pentium-mmx)
+  ARCH_PACKAGES:=x86
+else ifeq ($(ARCH_PACKAGES),i386_pentium4)
+  ARCH_PACKAGES:=x86
+else ifeq ($(ARCH_PACKAGES),riscv64_riscv64)
+  ARCH_PACKAGES:=riscv64
+endif
+
 PKG_SOURCE:=naiveproxy-v$(PKG_VERSION)-openwrt-$(ARCH_PACKAGES).tar.xz
 PKG_SOURCE_URL:=https://github.com/klzgrad/naiveproxy/releases/download/v$(PKG_VERSION)/
 
@@ -67,7 +76,7 @@ define Package/naiveproxy
   SUBMENU:=Web Servers/Proxies
   TITLE:=Make a fortune quietly
   URL:=https://github.com/klzgrad/naiveproxy
-  DEPENDS:=@!(arc||armeb||mips||mips64||powerpc||TARGET_gemini) +libatomic
+  DEPENDS:=@(aarch64||arm||i386||mipsel||riscv64||x86_64) +libatomic
 endef
 
 define Package/naiveproxy/description
