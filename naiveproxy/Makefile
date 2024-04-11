@@ -5,7 +5,9 @@ PKG_VERSION:=123.0.6312.40-1
 PKG_RELEASE:=1
 
 # intel 80386 & riscv64
-ifeq ($(ARCH_PACKAGES),i386_pentium-mmx)
+ifeq ($(ARCH_PACKAGES),aarch64_cortex-a76)
+  ARCH_PACKAGES:=aarch64_generic
+else ifeq ($(ARCH_PACKAGES),i386_pentium-mmx)
   ARCH_PACKAGES:=x86
 else ifeq ($(ARCH_PACKAGES),i386_pentium4)
   ARCH_PACKAGES:=x86
