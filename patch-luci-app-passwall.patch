@@ -1,42 +1,5 @@
-From 8020f497bee2003a31a6bb2a744ed810bb758439 Mon Sep 17 00:00:00 2001
-From: sbwml <admin@cooluc.com>
-Date: Mon, 8 Apr 2024 08:35:43 +0800
-Subject: [PATCH] diy
-
-Signed-off-by: sbwml <admin@cooluc.com>
----
- luci-app-passwall/Makefile                    |  1 -
- .../luasrc/controller/passwall.lua            |  2 +-
- .../luasrc/model/cbi/passwall/client/acl.lua  |  1 -
- .../model/cbi/passwall/client/acl_config.lua  |  1 -
- .../model/cbi/passwall/client/app_update.lua  |  1 -
- .../model/cbi/passwall/client/global.lua      |  7 +++-
- .../model/cbi/passwall/client/haproxy.lua     |  1 -
- .../model/cbi/passwall/client/node_config.lua |  1 -
- .../model/cbi/passwall/client/node_list.lua   |  1 -
- .../cbi/passwall/client/node_subscribe.lua    |  1 -
- .../passwall/client/node_subscribe_config.lua |  1 -
- .../model/cbi/passwall/client/other.lua       |  1 -
- .../luasrc/model/cbi/passwall/client/rule.lua |  2 --
- .../model/cbi/passwall/client/rule_list.lua   |  1 -
- .../model/cbi/passwall/client/shunt_rules.lua |  1 -
- .../cbi/passwall/client/socks_config.lua      |  1 -
- .../model/cbi/passwall/server/index.lua       |  1 -
- .../luasrc/model/cbi/passwall/server/user.lua |  1 -
- luci-app-passwall/luasrc/passwall/api.lua     | 16 ---------
- .../view/passwall/app_update/app_version.htm  | 20 +++++------
- .../luasrc/view/passwall/global/status.htm    | 36 ++++++++++++++++---
- .../view/passwall/node_list/node_list.htm     |  2 +-
- .../view/passwall/rule/rule_version.htm       |  2 +-
- .../root/etc/uci-defaults/luci-passwall       |  1 +
- .../root/usr/share/passwall/0_default_config  |  2 +-
- .../root/usr/share/passwall/rules/direct_host | 13 +++++++
- .../root/usr/share/passwall/rules/direct_ip   |  5 +++
- .../root/usr/share/passwall/rules/proxy_host  |  1 -
- 28 files changed, 69 insertions(+), 55 deletions(-)
-
 diff --git a/luci-app-passwall/Makefile b/luci-app-passwall/Makefile
-index 9e0cdee..55ab008 100644
+index dbed859..8f22869 100644
 --- a/luci-app-passwall/Makefile
 +++ b/luci-app-passwall/Makefile
 @@ -171,7 +171,6 @@ define Package/$(PKG_NAME)/conffiles
@@ -48,10 +11,10 @@ index 9e0cdee..55ab008 100644
  
  include $(TOPDIR)/feeds/luci/luci.mk
 diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
-index 14596b4..c7f958c 100644
+index bfb8f79..31a6164 100644
 --- a/luci-app-passwall/luasrc/controller/passwall.lua
 +++ b/luci-app-passwall/luasrc/controller/passwall.lua
-@@ -243,7 +243,7 @@ function connect_status()
+@@ -242,7 +242,7 @@ function connect_status()
  	local e = {}
  	e.use_time = ""
  	local url = luci.http.formvalue("url")
@@ -73,7 +36,7 @@ index c303efe..6b4319e 100644
  s = m:section(TypedSection, "global", translate("ACLs"), "<font color='red'>" .. translate("ACLs is a tools which used to designate specific IP proxy mode.") .. "</font>")
  s.anonymous = true
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua
-index 50a93e6..5a3773f 100644
+index 1b89532..7ea123f 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua
 @@ -13,7 +13,6 @@ local port_validate = function(self, value, t)
@@ -97,7 +60,7 @@ index 8a59a43..9d47562 100644
  -- [[ App Settings ]]--
  s = m:section(TypedSection, "global_app", translate("App Update"),
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-index e202ccd..3c99e2e 100644
+index 9923b8c..a57de31 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 @@ -9,7 +9,6 @@ local has_chnlist = api.fs.access("/usr/share/passwall/rules/chnlist")
@@ -207,7 +170,7 @@ index 375cf9c..5823ce3 100644
  s = m:section(TypedSection, "global_rules", translate("Rule status"))
  s.anonymous = true
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua
-index 1c66608..3fac86c 100644
+index f6570bf..92a9178 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/rule_list.lua
 @@ -9,7 +9,6 @@ local chnlist_path = "/usr/share/passwall/rules/chnlist"
@@ -219,7 +182,7 @@ index 1c66608..3fac86c 100644
  -- [[ Rule List Settings ]]--
  s = m:section(TypedSection, "global_rules")
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/shunt_rules.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/shunt_rules.lua
-index 8896efe..8d19334 100644
+index 8e51638..ba7735e 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/shunt_rules.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/shunt_rules.lua
 @@ -4,7 +4,6 @@ local datatypes = api.datatypes
@@ -332,7 +295,7 @@ index c49ab6f..1591b79 100644
  </div>
  <%end%>
 diff --git a/luci-app-passwall/luasrc/view/passwall/global/status.htm b/luci-app-passwall/luasrc/view/passwall/global/status.htm
-index e6b804c..46c50d4 100644
+index 00f79ff..452d369 100644
 --- a/luci-app-passwall/luasrc/view/passwall/global/status.htm
 +++ b/luci-app-passwall/luasrc/view/passwall/global/status.htm
 @@ -1,5 +1,11 @@
@@ -439,23 +402,11 @@ index 24662de..77b6a0b 100644
  		</div>
  	</div>
  </div>
-diff --git a/luci-app-passwall/root/etc/uci-defaults/luci-passwall b/luci-app-passwall/root/etc/uci-defaults/luci-passwall
-index 245e4cd..fbf6ccb 100755
---- a/luci-app-passwall/root/etc/uci-defaults/luci-passwall
-+++ b/luci-app-passwall/root/etc/uci-defaults/luci-passwall
-@@ -27,6 +27,7 @@ uci -q batch <<-EOF >/dev/null
- 	commit uhttpd
- EOF
- 
-+
- touch /etc/config/passwall_show >/dev/null 2>&1
- [ ! -s "/etc/config/passwall" ] && cp -f /usr/share/passwall/0_default_config /etc/config/passwall
- 
 diff --git a/luci-app-passwall/root/usr/share/passwall/0_default_config b/luci-app-passwall/root/usr/share/passwall/0_default_config
-index 13ea985..78727c1 100644
+index b9ad81e..2dcafa3 100644
 --- a/luci-app-passwall/root/usr/share/passwall/0_default_config
 +++ b/luci-app-passwall/root/usr/share/passwall/0_default_config
-@@ -30,7 +30,7 @@ config global_haproxy
+@@ -32,7 +32,7 @@ config global_haproxy
  config global_delay
  	option auto_on '0'
  	option start_daemon '1'
@@ -522,6 +473,3 @@ index a70321f..95167f2 100644
  google.com.hk
 -gstatic.com
  xn--ngstr-lra8j.com
--- 
-2.42.0
-
