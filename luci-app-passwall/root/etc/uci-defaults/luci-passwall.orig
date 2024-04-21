@@ -31,7 +31,6 @@ uci -q batch <<-EOF >/dev/null
 	commit uhttpd
 EOF
 
-
 touch /etc/config/passwall_show >/dev/null 2>&1
 [ ! -s "/etc/config/passwall" ] && cp -f /usr/share/passwall/0_default_config /etc/config/passwall
 
