@@ -145,7 +145,7 @@ index 55bb691..e13625a 100644
  s = m:section(NamedSection, arg[1])
  s.addremove = false
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/other.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/other.lua
-index 4dd6967..2068b06 100644
+index 72997c3..04b70f3 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/other.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/other.lua
 @@ -11,7 +11,6 @@ local port_validate = function(self, value, t)
