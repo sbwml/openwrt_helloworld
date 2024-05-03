@@ -11,10 +11,10 @@ index 1fb70f5..e1a5538 100644
  
  include $(TOPDIR)/feeds/luci/luci.mk
 diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
-index bfb8f79..31a6164 100644
+index 626a7bd..622e952 100644
 --- a/luci-app-passwall/luasrc/controller/passwall.lua
 +++ b/luci-app-passwall/luasrc/controller/passwall.lua
-@@ -242,7 +242,7 @@ function connect_status()
+@@ -244,7 +244,7 @@ function connect_status()
  	local e = {}
  	e.use_time = ""
  	local url = luci.http.formvalue("url")
@@ -403,10 +403,10 @@ index 24662de..77b6a0b 100644
  	</div>
  </div>
 diff --git a/luci-app-passwall/root/usr/share/passwall/0_default_config b/luci-app-passwall/root/usr/share/passwall/0_default_config
-index cfe606d..1601d03 100644
+index 0d2bf8f..331951d 100644
 --- a/luci-app-passwall/root/usr/share/passwall/0_default_config
 +++ b/luci-app-passwall/root/usr/share/passwall/0_default_config
-@@ -32,7 +32,7 @@ config global_haproxy
+@@ -33,7 +33,7 @@ config global_haproxy
  config global_delay
  	option auto_on '0'
  	option start_daemon '1'
