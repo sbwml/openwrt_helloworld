@@ -11,10 +11,10 @@ index 1fb70f5..e1a5538 100644
  
  include $(TOPDIR)/feeds/luci/luci.mk
 diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
-index bfb8f79..31a6164 100644
+index 9b6f6c0..1c91506 100644
 --- a/luci-app-passwall/luasrc/controller/passwall.lua
 +++ b/luci-app-passwall/luasrc/controller/passwall.lua
-@@ -242,7 +242,7 @@ function connect_status()
+@@ -250,7 +250,7 @@ function connect_status()
  	local e = {}
  	e.use_time = ""
  	local url = luci.http.formvalue("url")
