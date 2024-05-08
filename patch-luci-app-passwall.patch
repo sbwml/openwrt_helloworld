@@ -11,7 +11,7 @@ index 1fb70f5..e1a5538 100644
  
  include $(TOPDIR)/feeds/luci/luci.mk
 diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
-index 9b6f6c0..1c91506 100644
+index 1920a9c..ba7116c 100644
 --- a/luci-app-passwall/luasrc/controller/passwall.lua
 +++ b/luci-app-passwall/luasrc/controller/passwall.lua
 @@ -250,7 +250,7 @@ function connect_status()
