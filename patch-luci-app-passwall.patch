@@ -11,13 +11,13 @@ index 1fb70f5..e1a5538 100644
  
  include $(TOPDIR)/feeds/luci/luci.mk
 diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
-index 1920a9c..ba7116c 100644
+index 8c8be28..9043e61 100644
 --- a/luci-app-passwall/luasrc/controller/passwall.lua
 +++ b/luci-app-passwall/luasrc/controller/passwall.lua
-@@ -250,7 +250,7 @@ function connect_status()
- 	local e = {}
- 	e.use_time = ""
- 	local url = luci.http.formvalue("url")
+@@ -265,7 +265,7 @@ function connect_status()
+ 			end
+ 		end
+ 	end
 -	local result = luci.sys.exec('curl --connect-timeout 3 -o /dev/null -I -sk -w "%{http_code}:%{time_appconnect}" ' .. url)
 +	local result = luci.sys.exec('curl --connect-timeout 3 -o /dev/null -I -sk -w "%{http_code}:%{time_starttransfer}" ' .. url)
  	local code = tonumber(luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $1}'") or "0")
@@ -36,7 +36,7 @@ index c303efe..6b4319e 100644
  s = m:section(TypedSection, "global", translate("ACLs"), "<font color='red'>" .. translate("ACLs is a tools which used to designate specific IP proxy mode.") .. "</font>")
  s.anonymous = true
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua
-index e355bc9..96e49cc 100644
+index 22a76c6..6b10651 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/acl_config.lua
 @@ -13,7 +13,6 @@ local port_validate = function(self, value, t)
@@ -60,7 +60,7 @@ index 8a59a43..9d47562 100644
  -- [[ App Settings ]]--
  s = m:section(TypedSection, "global_app", translate("App Update"),
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-index f830888..f95454d 100644
+index d2b8593..1204cbe 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 @@ -9,7 +9,6 @@ local has_chnlist = api.fs.access("/usr/share/passwall/rules/chnlist")
@@ -71,8 +71,8 @@ index f830888..f95454d 100644
  
  local nodes_table = {}
  for k, e in ipairs(api.get_valid_nodes()) do
-@@ -332,6 +331,12 @@ o:value("8.8.8.8", "8.8.8.8 (Google)")
- o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
+@@ -333,6 +332,12 @@ o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
+ o:value("149.112.112.112", "149.112.112.112 (Quad9-Recommended)")
  o:value("208.67.220.220", "208.67.220.220 (OpenDNS)")
  o:value("208.67.222.222", "208.67.222.222 (OpenDNS)")
 +if nixio.fs.access("/usr/share/mosdns/mosdns.sh") then
