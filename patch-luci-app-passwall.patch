@@ -11,11 +11,11 @@ index 1fb70f5..e1a5538 100644
  
  include $(TOPDIR)/feeds/luci/luci.mk
 diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
-index 8c8be28..9043e61 100644
+index e52338c..7c71fff 100644
 --- a/luci-app-passwall/luasrc/controller/passwall.lua
 +++ b/luci-app-passwall/luasrc/controller/passwall.lua
-@@ -265,7 +265,7 @@ function connect_status()
- 			end
+@@ -263,7 +263,7 @@ function connect_status()
+ 			url = "--socks5 127.0.0.1:" .. socks_port .. " " .. url
  		end
  	end
 -	local result = luci.sys.exec('curl --connect-timeout 3 -o /dev/null -I -sk -w "%{http_code}:%{time_appconnect}" ' .. url)
