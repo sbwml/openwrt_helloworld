@@ -1,5 +1,5 @@
 diff --git a/luci-app-passwall/Makefile b/luci-app-passwall/Makefile
-index 1fb70f5..e1a5538 100644
+index 7543450..6a4ce1e 100644
 --- a/luci-app-passwall/Makefile
 +++ b/luci-app-passwall/Makefile
 @@ -171,7 +171,6 @@ define Package/$(PKG_NAME)/conffiles
