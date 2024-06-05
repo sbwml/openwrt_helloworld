@@ -24,7 +24,7 @@ index e52338c..7c71fff 100644
  	if code ~= 0 then
  		local use_time = luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $2}'")
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-index 89378ee..1204cbe 100644
+index ef406ad..5590dd9 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 @@ -332,6 +332,12 @@ o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
