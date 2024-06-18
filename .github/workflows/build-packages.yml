@@ -1,14 +1,12 @@
 name: Build Packages
 
 on:
-  watch:
-    types: started
+  workflow_dispatch:
   repository_dispatch:
-    types: build
+    types: [build]
 
 jobs:
   build:
-    if: github.event.repository.owner.id == github.event.sender.id
     name: Build ${{ matrix.arch }}-${{ matrix.tag }}
     runs-on: ubuntu-latest
     strategy:
