@@ -11,10 +11,10 @@ index 7543450..6a4ce1e 100644
  
  include $(TOPDIR)/feeds/luci/luci.mk
 diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
-index e52338c..7c71fff 100644
+index 1440118..be9dd12 100644
 --- a/luci-app-passwall/luasrc/controller/passwall.lua
 +++ b/luci-app-passwall/luasrc/controller/passwall.lua
-@@ -263,7 +263,7 @@ function connect_status()
+@@ -265,7 +265,7 @@ function connect_status()
  			url = "--socks5 127.0.0.1:" .. socks_port .. " " .. url
  		end
  	end
