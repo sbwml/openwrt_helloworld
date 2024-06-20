@@ -412,7 +412,9 @@ o.datatype = "uinteger"
 o.default = "30"
 
 o = s:option(Value, "keepaliveperiod", translate("The keep-alive period.(Unit:second)"))
+o.description = translate("Default value 0 indicatesno heartbeat.")
 o:depends({type = "hysteria", flag_quicparam = "1"})
+o:depends({type = "v2ray", v2ray_protocol = "wireguard"})
 o.rmempty = true
 o.datatype = "uinteger"
 o.default = "10"
@@ -525,9 +527,7 @@ o.default = "3"
 o.rmempty = true
 
 o = s:option(Value, "timeout", translate("Timeout for establishing a connection to server(second)"))
-o.description = translate("Default value 0 indicatesno heartbeat.")
 o:depends("type", "tuic")
-o:depends({type = "v2ray", v2ray_protocol = "wireguard"})
 o.datatype = "uinteger"
 o.default = "8"
 o.rmempty = true
@@ -568,6 +568,7 @@ o.rmempty = true
 
 -- Tuic settings for the local inbound socks5 server
 o = s:option(Flag, "tuic_dual_stack", translate("Dual-stack Listening Socket"))
+o.description = translate("If this option is not set, the socket behavior is platform dependent.")
 o:depends("type", "tuic")
 o.default = "0"
 o.rmempty = true
@@ -941,7 +942,8 @@ o:depends("reality", true)
 o.rmempty = true
 
 o = s:option(DynamicList, "tls_alpn", translate("TLS ALPN"))
-o:depends({type = "tuic", tls = true})
+o:depends("type", "tuic")
+o.default = "h3"
 o.rmempty = true
 
 -- [[ allowInsecure ]]--
