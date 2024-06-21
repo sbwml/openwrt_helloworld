@@ -1,5 +1,5 @@
 diff --git a/luci-app-ssr-plus/Makefile b/luci-app-ssr-plus/Makefile
-index 82e06b3..17e6a6b 100644
+index 7ea5e11..0c1f340 100644
 --- a/luci-app-ssr-plus/Makefile
 +++ b/luci-app-ssr-plus/Makefile
 @@ -9,10 +9,9 @@ PKG_CONFIG_DEPENDS:= \
@@ -429,10 +429,10 @@ index 479d7e2..5eecbee 100644
  			return false;
  		}
  	}
-diff --git a/luci-app-ssr-plus/po/zh-cn/ssr-plus.po b/luci-app-ssr-plus/po/zh-cn/ssr-plus.po
+diff --git a/luci-app-ssr-plus/po/zh_Hans/ssr-plus.po b/luci-app-ssr-plus/po/zh_Hans/ssr-plus.po
 index e292f10..07c6dbc 100644
---- a/luci-app-ssr-plus/po/zh-cn/ssr-plus.po
-+++ b/luci-app-ssr-plus/po/zh-cn/ssr-plus.po
+--- a/luci-app-ssr-plus/po/zh_Hans/ssr-plus.po
++++ b/luci-app-ssr-plus/po/zh_Hans/ssr-plus.po
 @@ -552,27 +552,6 @@ msgstr "使用 DNS2TCP 查询"
  msgid "Use DNS2SOCKS query and cache"
  msgstr "使用 DNS2SOCKS 查询并缓存"
