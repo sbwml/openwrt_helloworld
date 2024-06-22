@@ -782,7 +782,7 @@ index a0b9f5c..0000000
 -        listen: 0.0.0.0:DNS_PORT
 -
 diff --git a/luci-app-ssr-plus/root/etc/ssrplus/white.list b/luci-app-ssr-plus/root/etc/ssrplus/white.list
-index 9055fcb..30899a9 100644
+index 9055fcb..8c3ca2b 100644
 --- a/luci-app-ssr-plus/root/etc/ssrplus/white.list
 +++ b/luci-app-ssr-plus/root/etc/ssrplus/white.list
 @@ -1,7 +1,37 @@
@@ -813,7 +813,7 @@ index 9055fcb..30899a9 100644
 +checkport.synology.com
 +crashlytics.com
 +ddns.synology.com
-+gh.cooluc.com
++gitmirror.com
 +icloud-content.com
 +icloud.com
 +icloud.com.cn
