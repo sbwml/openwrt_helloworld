@@ -200,14 +200,14 @@ index 3ac47fb..ed96a2f 100644
  config global_forwarding
  	option tcp_no_redir_ports 'disable'
 diff --git a/luci-app-passwall/root/usr/share/passwall/rules/direct_host b/luci-app-passwall/root/usr/share/passwall/rules/direct_host
-index a3b1464..ab18acc 100644
+index a3b1464..2613703 100644
 --- a/luci-app-passwall/root/usr/share/passwall/rules/direct_host
 +++ b/luci-app-passwall/root/usr/share/passwall/rules/direct_host
 @@ -4,8 +4,12 @@ microsoft.com
  dyndns.com
  douyucdn.cn
  douyucdn2.cn
-+gh.cooluc.com
++gitmirror.com
  location.services.mozilla.com
  
 +# google
