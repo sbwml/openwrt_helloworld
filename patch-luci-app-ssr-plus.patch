@@ -430,7 +430,7 @@ index 479d7e2..5eecbee 100644
  		}
  	}
 diff --git a/luci-app-ssr-plus/po/zh_Hans/ssr-plus.po b/luci-app-ssr-plus/po/zh_Hans/ssr-plus.po
-index e292f10..07c6dbc 100644
+index 8184bee..60ac526 100644
 --- a/luci-app-ssr-plus/po/zh_Hans/ssr-plus.po
 +++ b/luci-app-ssr-plus/po/zh_Hans/ssr-plus.po
 @@ -552,27 +552,6 @@ msgstr "使用 DNS2TCP 查询"
