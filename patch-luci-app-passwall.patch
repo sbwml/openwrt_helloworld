@@ -1,5 +1,5 @@
 diff --git a/luci-app-passwall/Makefile b/luci-app-passwall/Makefile
-index 7543450..6a4ce1e 100644
+index 4b41cee..b3e867e 100644
 --- a/luci-app-passwall/Makefile
 +++ b/luci-app-passwall/Makefile
 @@ -171,7 +171,6 @@ define Package/$(PKG_NAME)/conffiles
@@ -24,10 +24,10 @@ index 1440118..be9dd12 100644
  	if code ~= 0 then
  		local use_time = luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $2}'")
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-index 2320472..788a8fd 100644
+index 5e3a0c6..f84f399 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-@@ -332,6 +332,12 @@ o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
+@@ -346,6 +346,12 @@ o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
  o:value("149.112.112.112", "149.112.112.112 (Quad9-Recommended)")
  o:value("208.67.220.220", "208.67.220.220 (OpenDNS)")
  o:value("208.67.222.222", "208.67.222.222 (OpenDNS)")
