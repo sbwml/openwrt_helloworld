@@ -11,18 +11,11 @@ index 4b41cee..b3e867e 100644
  
  include $(TOPDIR)/feeds/luci/luci.mk
 diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
-index 6a38b20..be9dd12 100644
+index 03006a6..f384bbc 100644
 --- a/luci-app-passwall/luasrc/controller/passwall.lua
 +++ b/luci-app-passwall/luasrc/controller/passwall.lua
-@@ -260,12 +260,12 @@ function connect_status()
- 	local socks_port = uci:get(appname, "@global[0]", "tcp_node_socks_port")
- 	if enabled ~= 0 then
- 		if (chn_list == "proxy" and gfw_list == 0 and proxy_mode ~= "proxy" and baidu ~= nil) or (chn_list == 0 and gfw_list == 0 and proxy_mode == "proxy") then
--			url = "-x socks5h://127.0.0.1:" .. socks_port .. " " .. url
-+			url = "--socks5 127.0.0.1:" .. socks_port .. " " .. url
- 		elseif baidu == nil then
--			url = "-x socks5h://127.0.0.1:" .. socks_port .. " " .. url
-+			url = "--socks5 127.0.0.1:" .. socks_port .. " " .. url
+@@ -268,7 +268,7 @@ function connect_status()
+ 			url = "-x socks5h://127.0.0.1:" .. socks_port .. " " .. url
  		end
  	end
 -	local result = luci.sys.exec('curl --connect-timeout 3 -o /dev/null -I -sk -w "%{http_code}:%{time_appconnect}" ' .. url)
@@ -31,118 +24,10 @@ index 6a38b20..be9dd12 100644
  	if code ~= 0 then
  		local use_time = luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $2}'")
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-index 6df0021..20b594c 100644
+index 6df0021..1411a56 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-@@ -86,62 +86,32 @@ local doh_validate = function(self, value, t)
- end
- 
- local chinadns_dot_validate = function(self, value, t)
--	local function isValidDoTString(s)
--		local prefix = "tls://"
--		if s:sub(1, #prefix) ~= prefix then
--			return false
--		end
--		local address = s:sub(#prefix + 1)
--		local at_index = address:find("@")
--		local hash_index = address:find("#")
--		local domain, ip, port
--		if at_index then
--			if hash_index then
--				domain = address:sub(1, at_index - 1)
--				ip = address:sub(at_index + 1, hash_index - 1)
--				port = address:sub(hash_index + 1)
--			else
--				domain = address:sub(1, at_index - 1)
--				ip = address:sub(at_index + 1)
--				port = nil
--			end
--		else
--			if hash_index then
--				ip = address:sub(1, hash_index - 1)
--				port = address:sub(hash_index + 1)
--			else
--				ip = address
--				port = nil
--			end
--		end
--		local function isValidPort(port)
--			if not port then return true end
--			local num = tonumber(port)
--			return num and num > 0 and num < 65536
--		end
--		local function isValidDomain(domain)
--			if not domain then return true end
--			return #domain > 0
--		end
--		local function isValidIP(ip)
--			return datatypes.ipaddr(ip) or datatypes.ip6addr(ip)
--		end
--		if not isValidIP(ip) or not isValidPort(port) then
--			return false
--		end
--		if not isValidDomain(domain) then
--			return false
--		end
--		return true
--	end
--
- 	if value ~= "" then
- 		value = api.trim(value)
--		if isValidDoTString(value) then
--			return value
-+		-- Define patterns for IPv4, IPv6, domain, and port
-+		local ipv4_pattern = "(%d+%.%d+%.%d+%.%d+)"
-+		local ipv6_pattern = "([%[%]a-fA-F0-9:]+)"  -- IPv6 addresses are wrapped in []
-+		local domain_pattern = "([%w-_%.]+)"
-+		local port_pattern = "(%d+)"
-+		-- Define patterns for the different formats
-+		local patterns = {
-+		"^tls://" .. domain_pattern .. "@" .. ipv4_pattern .. "#" .. port_pattern .. "$", -- tls://域名@ip#端口
-+		"^tls://" .. ipv4_pattern .. "#" .. port_pattern .. "$",                          -- tls://ip#端口
-+		"^tls://" .. domain_pattern .. "@" .. ipv4_pattern .. "$",                        -- tls://域名@ip
-+		"^tls://" .. ipv4_pattern .. "$",                                                 -- tls://ip
-+		"^tls://" .. domain_pattern .. "@" .. ipv6_pattern .. "#" .. port_pattern .. "$", -- tls://域名@[IPv6]#端口
-+		"^tls://" .. ipv6_pattern .. "#" .. port_pattern .. "$",                          -- tls://[IPv6]#端口
-+		"^tls://" .. domain_pattern .. "@" .. ipv6_pattern .. "$",                        -- tls://域名@[IPv6]
-+		"^tls://" .. ipv6_pattern .. "$"                                                  -- tls://[IPv6]
-+		}
-+		-- Check if the string matches any of the patterns
-+		for _, pattern in ipairs(patterns) do
-+			if value:match(pattern) then
-+				return value
-+			end
- 		end
-+		return nil, translate("Direct DNS") .. " DoT " .. translate("Format must be:") .. " tls://Domain@IP(#Port) or tls://IP(#Port)"
- 	end
--	return nil, translate("Direct DNS") .. " DoT " .. translate("Format must be:") .. " tls://Domain@IP(#Port) or tls://IP(#Port)"
- end
- 
- m:append(Template(appname .. "/global/status"))
-@@ -328,10 +298,10 @@ dns_shunt:value("chinadns-ng", "Dnsmasq + ChinaDNS-NG")
- o = s:taboption("DNS", ListValue, "direct_dns_mode", translate("Direct DNS") .. " " .. translate("Request protocol"))
- o.default = ""
- o:value("", translate("Auto"))
--o:value("udp", translatef("Requery DNS By %s", "UDP"))
--o:value("tcp", translatef("Requery DNS By %s", "TCP"))
-+o:value("udp", "UDP")
-+o:value("tcp", "TCP")
- if os.execute("chinadns-ng -V | grep -i wolfssl >/dev/null") == 0 then
--	o:value("dot", translatef("Requery DNS By %s", "DoT"))
-+	o:value("dot", "DoT")
- end
- --TO DO
- --o:value("doh", "DoH")
-@@ -364,8 +334,6 @@ o:value("tls://dot.pub@1.12.12.12")
- o:value("tls://dot.pub@120.53.53.53")
- o:value("tls://dot.360.cn@36.99.170.86")
- o:value("tls://dot.360.cn@101.198.191.4")
--o:value("tls://dns.alidns.com@2400:3200::1")
--o:value("tls://dns.alidns.com@2400:3200:baba::1")
- o.validate = chinadns_dot_validate
- o:depends("direct_dns_mode", "dot")
- 
-@@ -435,6 +403,12 @@ o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
+@@ -435,6 +435,12 @@ o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
  o:value("149.112.112.112", "149.112.112.112 (Quad9-Recommended)")
  o:value("208.67.220.220", "208.67.220.220 (OpenDNS)")
  o:value("208.67.222.222", "208.67.222.222 (OpenDNS)")
@@ -314,211 +199,6 @@ index 3addd08..25ad638 100644
  
  config global_forwarding
  	option tcp_no_redir_ports 'disable'
-diff --git a/luci-app-passwall/root/usr/share/passwall/app.sh b/luci-app-passwall/root/usr/share/passwall/app.sh
-index 55aacd9..27672a3 100755
---- a/luci-app-passwall/root/usr/share/passwall/app.sh
-+++ b/luci-app-passwall/root/usr/share/passwall/app.sh
-@@ -217,30 +217,6 @@ check_depends() {
- 	fi
- }
- 
--check_ver() {
--	local version1="$1"
--	local version2="$2"
--	local i v1 v1_1 v1_2 v1_3 v2 v2_1 v2_2 v2_3
--	IFS='.'; set -- $version1; v1_1=${1:-0}; v1_2=${2:-0}; v1_3=${3:-0}
--	IFS='.'; set -- $version2; v2_1=${1:-0}; v2_2=${2:-0}; v2_3=${3:-0}
--	IFS=
--	for i in 1 2 3; do
--		eval v1=\$v1_$i
--		eval v2=\$v2_$i
--		if [ "$v1" -gt "$v2" ]; then
--			# $1 大于 $2
--			echo 0
--			return
--		elif [ "$v1" -lt "$v2" ]; then
--			# $1 小于 $2
--			echo 1
--			return
--		fi
--	done
--	# $1 等于 $2
--	echo 255
--}
--
- get_new_port() {
- 	port=$1
- 	[ "$port" == "auto" ] && port=2082
-@@ -926,16 +902,6 @@ run_redir() {
- 				_args="${_args} udp_redir_port=${UDP_REDIR_PORT}"
- 				config_file=$(echo $config_file | sed "s/TCP/TCP_UDP/g")
- 			}
--
--			local protocol=$(config_n_get $node protocol)
--			local default_node=$(config_n_get $node default_node)
--			local v2ray_dns_mode=$(config_t_get global v2ray_dns_mode tcp)
--			[ "${DNS_MODE}" != "sing-box" ] && [ "${DNS_MODE}" != "udp" ] && [ "$protocol" = "_shunt" ] && [ "$default_node" = "_direct" ] && {
--				DNS_MODE="sing-box"
--				v2ray_dns_mode="tcp"
--				echolog "* 当前TCP节点采用Sing-Box分流且默认节点为直连，远程DNS过滤模式将默认使用Sing-Box(TCP)，防止环回！"
--			}
--
- 			[ "${DNS_MODE}" = "sing-box" ] && {
- 				resolve_dns=1
- 				config_file=$(echo $config_file | sed "s/.json/_DNS.json/g")
-@@ -944,8 +910,11 @@ run_redir() {
- 				[ "${DNS_CACHE}" == "0" ] && _args="${_args} dns_cache=0"
- 				resolve_dns_port=${dns_listen_port}
- 				_args="${_args} dns_listen_port=${resolve_dns_port}"
-+
- 				local local_dns=$(echo "${LOCAL_DNS}" | sed "s/,/\n/g" | head -n1)
- 				_args="${_args} direct_dns_udp_server=${local_dns}"
-+
-+				local v2ray_dns_mode=$(config_t_get global v2ray_dns_mode tcp)
- 				_args="${_args} remote_dns_protocol=${v2ray_dns_mode}"
- 				case "$v2ray_dns_mode" in
- 					tcp)
-@@ -988,16 +957,6 @@ run_redir() {
- 				_args="${_args} udp_redir_port=${UDP_REDIR_PORT}"
- 				config_file=$(echo $config_file | sed "s/TCP/TCP_UDP/g")
- 			}
--
--			local protocol=$(config_n_get $node protocol)
--			local default_node=$(config_n_get $node default_node)
--			local v2ray_dns_mode=$(config_t_get global v2ray_dns_mode tcp)
--			[ "${DNS_MODE}" != "xray" ] && [ "${DNS_MODE}" != "udp" ] && [ "$protocol" = "_shunt" ] && [ "$default_node" = "_direct" ] && {
--				DNS_MODE="xray"
--				v2ray_dns_mode="tcp"
--				echolog "* 当前TCP节点采用Xray分流且默认节点为直连，远程DNS过滤模式将默认使用Xray(TCP)，防止环回！"
--			}
--
- 			[ "${DNS_MODE}" = "xray" ] && {
- 				resolve_dns=1
- 				config_file=$(echo $config_file | sed "s/.json/_DNS.json/g")
-@@ -1009,6 +968,7 @@ run_redir() {
- 				resolve_dns_port=${dns_listen_port}
- 				_args="${_args} dns_listen_port=${resolve_dns_port}"
- 				_args="${_args} remote_dns_tcp_server=${REMOTE_DNS}"
-+				local v2ray_dns_mode=$(config_t_get global v2ray_dns_mode tcp)
- 				if [ "$v2ray_dns_mode" = "tcp+doh" ]; then
- 					remote_dns_doh=$(config_t_get global remote_dns_doh "https://1.1.1.1/dns-query")
- 					_args="${_args} remote_dns_doh=${remote_dns_doh}"
-@@ -1338,18 +1298,15 @@ stop_crontab() {
- start_dns() {
- 	echolog "DNS域名解析："
- 
--	local china_ng_local_dns=${LOCAL_DNS}
- 	local direct_dns_mode=$(config_t_get global direct_dns_mode "auto")
- 	case "$direct_dns_mode" in
- 		udp)
- 			LOCAL_DNS=$(config_t_get global direct_dns_udp 223.5.5.5 | sed 's/:/#/g')
--			china_ng_local_dns=${LOCAL_DNS}
- 		;;
- 		tcp)
- 			LOCAL_DNS="127.0.0.1#${dns_listen_port}"
- 			dns_listen_port=$(expr $dns_listen_port + 1)
- 			local DIRECT_DNS=$(config_t_get global direct_dns_tcp 223.5.5.5 | sed 's/:/#/g')
--			china_ng_local_dns="tcp://${DIRECT_DNS}"
- 			ln_run "$(first_type dns2tcp)" dns2tcp "/dev/null" -L "${LOCAL_DNS}" -R "$(get_first_dns DIRECT_DNS 53)" -v
- 			echolog "  - dns2tcp(${LOCAL_DNS}) -> tcp://$(get_first_dns DIRECT_DNS 53 | sed 's/#/:/g')"
- 			echolog "  * 请确保上游直连 DNS 支持 TCP 查询。"
-@@ -1360,12 +1317,11 @@ start_dns() {
- 				local cdns_listen_port=${dns_listen_port}
- 				dns_listen_port=$(expr $dns_listen_port + 1)
- 				local DIRECT_DNS=$(config_t_get global direct_dns_dot "tls://dot.pub@1.12.12.12")
--				china_ng_local_dns=${DIRECT_DNS}
--				ln_run "$(first_type chinadns-ng)" chinadns-ng "/dev/null" -b 127.0.0.1 -l ${cdns_listen_port} -c ${DIRECT_DNS} -d chn
-+				ln_run "$(first_type chinadns-ng)" chinadns-ng "/dev/null" -b 127.0.0.1 -l ${cdns_listen_port}@udp -c ${DIRECT_DNS} -d chn
- 				echolog "  - ChinaDNS-NG(${LOCAL_DNS}) -> ${DIRECT_DNS}"
- 				echolog "  * 请确保上游直连 DNS 支持 DoT 查询。"
- 			else
--				echolog "  - 你的ChinaDNS-NG版本不支持DoT，直连DNS将使用默认地址。"
-+				echolog "  - 你的ChinaDNS-NG版本不支持DoT，直连DNS将使用默认UDP地址。"
- 			fi
- 		;;
- 		auto)
-@@ -1477,11 +1433,13 @@ start_dns() {
- 	[ "${use_udp_node_resolve_dns}" = "1" ] && echolog "  * 请确认上游 DNS 支持 UDP 查询并已使用 UDP 节点，如上游 DNS 非直连地址，确保 UDP 代理打开，并且已经正确转发！"
- 
- 	[ "$DNS_SHUNT" = "chinadns-ng" ] && [ -n "$(first_type chinadns-ng)" ] && {
--		chinadns_ng_min=2024.04.13
--		chinadns_ng_now=$(chinadns-ng -V | grep -i "ChinaDNS-NG " | awk '{print $2}')
--		if [ $(check_ver "$chinadns_ng_now" "$chinadns_ng_min") = 1 ]; then
--			echolog "  * 注意：当前 ChinaDNS-NG 版本为[ $chinadns_ng_now ]，请更新到[ $chinadns_ng_min ]或以上版本，否则 DNS 有可能无法正常工作！"
-+		chinadns_ng_min=2024-04-13
-+		chinadns_ng_now=$(chinadns-ng -V | grep -i "ChinaDNS-NG " | awk '{print $2}' | awk 'BEGIN{FS=".";OFS="-"};{print $1,$2,$3}')
-+		if [ $(date -d "$chinadns_ng_now" +%s) -lt $(date -d "$chinadns_ng_min" +%s) ]; then
-+			echolog "  * 注意：当前 ChinaDNS-NG 版本为[ ${chinadns_ng_now//-/.} ]，请更新到[ ${chinadns_ng_min//-/.} ]或以上版本，否则 DNS 有可能无法正常工作！"
- 		fi
-+		
-+		local china_ng_local_dns=$(echo -n $(echo "${LOCAL_DNS}" | sed "s/,/\n/g" | head -n2  | awk -v prefix="udp://" '{ for (i=1; i<=NF; i++) print prefix $i }') | tr " " ",")
- 
- 		[ "$FILTER_PROXY_IPV6" = "1" ] && DNSMASQ_FILTER_PROXY_IPV6=0
- 		[ -z "${china_ng_listen_port}" ] && local china_ng_listen_port=$(expr $dns_listen_port + 1)
-@@ -1652,31 +1610,16 @@ acl_app() {
- 							}
- 
- 							[ "$dns_shunt" = "chinadns-ng" ] && [ -n "$(first_type chinadns-ng)" ] && {
--								chinadns_ng_min=2024.04.13
--								chinadns_ng_now=$(chinadns-ng -V | grep -i "ChinaDNS-NG " | awk '{print $2}')
--								if [ $(check_ver "$chinadns_ng_now" "$chinadns_ng_min") = 1 ]; then
--									echolog "  * 注意：当前 ChinaDNS-NG 版本为[ $chinadns_ng_now ]，请更新到[ $chinadns_ng_min ]或以上版本，否则 DNS 有可能无法正常工作！"
-+								chinadns_ng_min=2024-04-13
-+								chinadns_ng_now=$(chinadns-ng -V | grep -i "ChinaDNS-NG " | awk '{print $2}' | awk 'BEGIN{FS=".";OFS="-"};{print $1,$2,$3}')
-+								if [ $(date -d "$chinadns_ng_now" +%s) -lt $(date -d "$chinadns_ng_min" +%s) ]; then
-+									echolog "  * 注意：当前 ChinaDNS-NG 版本为[ ${chinadns_ng_now//-/.} ]，请更新到[ ${chinadns_ng_min//-/.} ]或以上版本，否则 DNS 有可能无法正常工作！"
- 								fi
- 
- 								[ "$filter_proxy_ipv6" = "1" ] && dnsmasq_filter_proxy_ipv6=0
- 								chinadns_port=$(expr $chinadns_port + 1)
- 								_china_ng_listen="127.0.0.1#${chinadns_port}"
--
--								_chinadns_local_dns=${LOCAL_DNS}
--								_direct_dns_mode=$(config_t_get global direct_dns_mode "auto")
--								case "${_direct_dns_mode}" in
--									udp)
--										_chinadns_local_dns=$(config_t_get global direct_dns_udp 223.5.5.5 | sed 's/:/#/g')
--									;;
--									tcp)
--										_chinadns_local_dns="tcp://$(config_t_get global direct_dns_tcp 223.5.5.5 | sed 's/:/#/g')"
--									;;
--									dot)
--										if [ "$(chinadns-ng -V | grep -i wolfssl)" != "nil" ]; then
--											_chinadns_local_dns=$(config_t_get global direct_dns_dot "tls://dot.pub@1.12.12.12")
--										fi
--									;;
--								esac
-+								_chinadns_local_dns=$(echo -n $(echo "${LOCAL_DNS}" | sed "s/,/\n/g" | head -n2  | awk -v prefix="udp://" '{ for (i=1; i<=NF; i++) print prefix $i }') | tr " " ",")
- 
- 								run_chinadns_ng \
- 									_flag="$sid" \
-@@ -1829,7 +1772,7 @@ acl_app() {
- 			[ -n "$redirect_dns_port" ] && echo "${redirect_dns_port}" > $TMP_ACL_PATH/$sid/var_redirect_dns_port
- 			unset enabled sid remarks sources use_global_config tcp_node udp_node use_direct_list use_proxy_list use_block_list use_gfw_list chn_list tcp_proxy_mode udp_proxy_mode filter_proxy_ipv6 dns_mode remote_dns v2ray_dns_mode remote_dns_doh dns_client_ip
- 			unset _ip _mac _iprange _ipset _ip_or_mac rule_list tcp_port udp_port config_file _extra_param
--			unset _china_ng_listen _chinadns_local_dns _direct_dns_mode chinadns_ng_default_tag dnsmasq_filter_proxy_ipv6
-+			unset _china_ng_listen _chinadns_local_dns chinadns_ng_default_tag dnsmasq_filter_proxy_ipv6
- 			unset redirect_dns_port
- 		done
- 		unset socks_port redir_port dns_port dnsmasq_port chinadns_port
-diff --git a/luci-app-passwall/root/usr/share/passwall/nftables.sh b/luci-app-passwall/root/usr/share/passwall/nftables.sh
-index 17a8e0d..9ea9150 100755
---- a/luci-app-passwall/root/usr/share/passwall/nftables.sh
-+++ b/luci-app-passwall/root/usr/share/passwall/nftables.sh
-@@ -1252,11 +1252,10 @@ flush_include() {
- }
- 
- gen_include() {
--	flush_include
- 	local nft_chain_file=$TMP_PATH/PSW_RULE.nft
- 	local nft_set_file=$TMP_PATH/PSW_SETS.nft
--	echo '#!/usr/sbin/nft -f' > $nft_chain_file
--	echo '#!/usr/sbin/nft -f' > $nft_set_file
-+	echo "#!/usr/sbin/nft -f" > $nft_chain_file
-+	echo "#!/usr/sbin/nft -f" > $nft_set_file
- 	for chain in $(nft -a list chains | grep -E "chain PSW_" | awk -F ' ' '{print$2}'); do
- 		nft list chain inet fw4 ${chain} >> $nft_chain_file
- 	done
 diff --git a/luci-app-passwall/root/usr/share/passwall/rules/direct_host b/luci-app-passwall/root/usr/share/passwall/rules/direct_host
 index a3b1464..2613703 100644
 --- a/luci-app-passwall/root/usr/share/passwall/rules/direct_host
@@ -553,15 +233,14 @@ index a3b1464..2613703 100644
  dns.alidns.com
  doh.pub
 diff --git a/luci-app-passwall/root/usr/share/passwall/rules/direct_ip b/luci-app-passwall/root/usr/share/passwall/rules/direct_ip
-index b73edaa..3e1734a 100644
+index b73edaa..cb10e78 100644
 --- a/luci-app-passwall/root/usr/share/passwall/rules/direct_ip
 +++ b/luci-app-passwall/root/usr/share/passwall/rules/direct_ip
-@@ -4,7 +4,12 @@
+@@ -4,7 +4,11 @@
  223.6.6.6
  119.29.29.29
  180.76.76.76
 +34.149.0.0/16
-+134.195.211.0/24
 +148.135.119.0/24
  1.12.12.12
  120.53.53.53
