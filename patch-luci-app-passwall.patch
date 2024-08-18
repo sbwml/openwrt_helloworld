@@ -11,10 +11,10 @@ index 4b41cee..b3e867e 100644
  
  include $(TOPDIR)/feeds/luci/luci.mk
 diff --git a/luci-app-passwall/luasrc/controller/passwall.lua b/luci-app-passwall/luasrc/controller/passwall.lua
-index 03006a6..f384bbc 100644
+index 8cc5965..add2a56 100644
 --- a/luci-app-passwall/luasrc/controller/passwall.lua
 +++ b/luci-app-passwall/luasrc/controller/passwall.lua
-@@ -268,7 +268,7 @@ function connect_status()
+@@ -273,7 +273,7 @@ function connect_status()
  			url = "-x socks5h://127.0.0.1:" .. socks_port .. " " .. url
  		end
  	end
@@ -24,10 +24,10 @@ index 03006a6..f384bbc 100644
  	if code ~= 0 then
  		local use_time = luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $2}'")
 diff --git a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-index 6df0021..1411a56 100644
+index 3654bd1..3d800c8 100644
 --- a/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
 +++ b/luci-app-passwall/luasrc/model/cbi/passwall/client/global.lua
-@@ -435,6 +435,12 @@ o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
+@@ -493,6 +493,12 @@ o:value("9.9.9.9", "9.9.9.9 (Quad9-Recommended)")
  o:value("149.112.112.112", "149.112.112.112 (Quad9-Recommended)")
  o:value("208.67.220.220", "208.67.220.220 (OpenDNS)")
  o:value("208.67.222.222", "208.67.222.222 (OpenDNS)")
@@ -187,10 +187,10 @@ index 24662de..77b6a0b 100644
  	</div>
  </div>
 diff --git a/luci-app-passwall/root/usr/share/passwall/0_default_config b/luci-app-passwall/root/usr/share/passwall/0_default_config
-index 3addd08..25ad638 100644
+index 661f749..98aeba8 100644
 --- a/luci-app-passwall/root/usr/share/passwall/0_default_config
 +++ b/luci-app-passwall/root/usr/share/passwall/0_default_config
-@@ -32,7 +32,7 @@ config global_haproxy
+@@ -33,7 +33,7 @@ config global_haproxy
  config global_delay
  	option auto_on '0'
  	option start_daemon '1'
