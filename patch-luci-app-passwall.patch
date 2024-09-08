@@ -41,40 +41,38 @@ index cd9d8d4..0e5299b 100644
  o:depends({dns_mode = "tcp"})
  o:depends({dns_mode = "udp"})
 diff --git a/luci-app-passwall/luasrc/view/passwall/app_update/app_version.htm b/luci-app-passwall/luasrc/view/passwall/app_update/app_version.htm
-index c49ab6f..1591b79 100644
+index 739c593..3769e7d 100644
 --- a/luci-app-passwall/luasrc/view/passwall/app_update/app_version.htm
 +++ b/luci-app-passwall/luasrc/view/passwall/app_update/app_version.htm
-@@ -177,12 +177,10 @@ local version = {}
+@@ -180,12 +180,12 @@ local version = {}
  <div class="cbi-value">
  	<label class="cbi-value-title">Passwall <%:Version%></label>
  	<div class="cbi-value-field">
 -		<div class="cbi-value-description">
--			<span>【 <%=api.get_version()%> 】</span>
--			<input class="btn cbi-button cbi-button-apply" type="button" id="passwall-check_btn"
--				onclick="onBtnClick(this,'passwall');" value="<%:Check update%>" />
--			<span id="passwall-check_btn-detail"></span>
++		<!--div class="cbi-value-description"-->
+ 			<span>【 <%=api.get_version()%> 】</span>
+ 			<input class="btn cbi-button cbi-button-apply" type="button" id="passwall-check_btn"
+ 				onclick="onBtnClick(this,'passwall');" value="<%:Check update%>" />
+ 			<span id="passwall-check_btn-detail"></span>
 -		</div>
-+		<span>【 <%=api.get_version()%> 】</span>
-+		<input class="btn cbi-button cbi-button-apply" type="button" id="passwall-check_btn"
-+			onclick="onBtnClick(this,'passwall');" value="<%:Check update%>" />
-+		<span id="passwall-check_btn-detail"></span>
++		<!--/div-->
  	</div>
  </div>
  
-@@ -193,12 +191,10 @@ local version = {}
+@@ -196,14 +196,14 @@ local version = {}
  		<%:Version%>
  	</label>
  	<div class="cbi-value-field">
 -		<div class="cbi-value-description">
--			<span>【 <%=version[k] ~="" and version[k] or translate("Null") %> 】</span>
--			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn"
--				onclick="onBtnClick(this,'<%=k%>');" value="<%:Check update%>" />
--			<span id="_<%=k%>-check_btn-detail"></span>
++		<!--div class="cbi-value-description"-->
+ 			<span>【 <%=version[k] ~="" and version[k] or translate("Null") %> 】</span>
+ 			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn"
+ 				onclick="onBtnClick(this,'<%=k%>');" value="<%:Check update%>" />
+ 			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-force_btn"
+ 				onclick="doUpdate(this,'<%=k%>');" value="<%:Force update%>" style="display:none"/>
+ 			<span id="_<%=k%>-check_btn-detail"></span>
 -		</div>
-+		<span>【 <%=version[k] ~="" and version[k] or translate("Null") %> 】</span>
-+		<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn"
-+			onclick="onBtnClick(this,'<%=k%>');" value="<%:Check update%>" />
-+		<span id="_<%=k%>-check_btn-detail"></span>
++		<!--/div-->
  	</div>
  </div>
  <%end%>
