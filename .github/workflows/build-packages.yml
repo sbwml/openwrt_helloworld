@@ -55,7 +55,34 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.tag }}
           FEEDNAME: packages_ci
-          PACKAGES: luci-app-homeproxy luci-app-passwall luci-app-passwall2 luci-app-ssr-plus hysteria ipt2socks pdnsd redsocks2 shadow-tls trojan trojan-plus tuic-client xray-plugin v2ray-core v2ray-geodata naiveproxy chinadns-ng
+          PACKAGES: \
+            chinadns-ng \
+            dns2socks \
+            dns2tcp \
+            hysteria \
+            ipt2socks \
+            lua-neturl \
+            luci-app-homeproxy \
+            luci-app-passwall \
+            luci-app-passwall2 \
+            luci-app-ssr-plus \
+            microsocks \
+            naiveproxy \
+            pdnsd \
+            redsocks2 \
+            shadow-tls \
+            shadowsocks-rust \
+            shadowsocksr-libev \
+            simple-obfs \
+            sing-box \
+            tcping \
+            trojan \
+            trojan-plus \
+            tuic-client \
+            v2ray-core \
+            v2ray-geodata \
+            xray-core \
+            xray-plugin
           KEY_BUILD: ${{ secrets.sign_key }}
           NO_REFRESH_CHECK: true
           IGNORE_ERRORS: true
