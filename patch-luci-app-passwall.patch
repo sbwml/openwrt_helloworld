@@ -1,5 +1,5 @@
 diff --git a/luci-app-passwall/Makefile b/luci-app-passwall/Makefile
-index 51ec2b6..f57cc0a 100644
+index e4be5cc..56f563b 100644
 --- a/luci-app-passwall/Makefile
 +++ b/luci-app-passwall/Makefile
 @@ -171,7 +171,6 @@ define Package/$(PKG_NAME)/conffiles
@@ -185,7 +185,7 @@ index 24662de..77b6a0b 100644
  	</div>
  </div>
 diff --git a/luci-app-passwall/root/usr/share/passwall/0_default_config b/luci-app-passwall/root/usr/share/passwall/0_default_config
-index 58f56ac..c2b16f1 100644
+index 1bdbb35..cab712b 100644
 --- a/luci-app-passwall/root/usr/share/passwall/0_default_config
 +++ b/luci-app-passwall/root/usr/share/passwall/0_default_config
 @@ -32,7 +32,7 @@ config global_haproxy
@@ -232,7 +232,7 @@ index a3b1464..2aed721 100644
  dns.alidns.com
  doh.pub
 diff --git a/luci-app-passwall/root/usr/share/passwall/rules/direct_ip b/luci-app-passwall/root/usr/share/passwall/rules/direct_ip
-index b73edaa..cb10e78 100644
+index b73edaa..d48bc4a 100644
 --- a/luci-app-passwall/root/usr/share/passwall/rules/direct_ip
 +++ b/luci-app-passwall/root/usr/share/passwall/rules/direct_ip
 @@ -4,7 +4,11 @@
@@ -240,7 +240,7 @@ index b73edaa..cb10e78 100644
  119.29.29.29
  180.76.76.76
 +34.149.0.0/16
-+148.135.119.0/24
++72.18.83.0/24
  1.12.12.12
  120.53.53.53
 +203.208.39.192/28
