@@ -1,5 +1,5 @@
 diff --git a/luci-app-ssr-plus/Makefile b/luci-app-ssr-plus/Makefile
-index 7ea5e11..0c1f340 100644
+index d07f167..b2af119 100644
 --- a/luci-app-ssr-plus/Makefile
 +++ b/luci-app-ssr-plus/Makefile
 @@ -9,10 +9,9 @@ PKG_CONFIG_DEPENDS:= \
@@ -82,7 +82,7 @@ index 7ea5e11..0c1f340 100644
  	config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_NONE_Server
 @@ -135,25 +134,21 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_ChinaDNS_NG
  	bool "Include ChinaDNS-NG"
- 	default y
+ 	default n
  
 -config PACKAGE_$(PKG_NAME)_INCLUDE_MosDNS
 -	bool "Include MosDNS"
@@ -462,7 +462,7 @@ index 8184bee..60ac526 100644
  msgstr "DNS 服务器 IP:Port"
  
 diff --git a/luci-app-ssr-plus/root/etc/init.d/shadowsocksr b/luci-app-ssr-plus/root/etc/init.d/shadowsocksr
-index 9d22e62..6cfad51 100755
+index b1570aa..ec19a6f 100755
 --- a/luci-app-ssr-plus/root/etc/init.d/shadowsocksr
 +++ b/luci-app-ssr-plus/root/etc/init.d/shadowsocksr
 @@ -178,23 +178,17 @@ ln_start_bin() {
