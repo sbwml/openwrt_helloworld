@@ -1,0 +1,62 @@
+name: Build luci-app-daed
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [daed]
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64_cortex-a53
+          - aarch64_cortex-a72
+          - aarch64_generic
+          - i386_pentium-mmx
+          - i386_pentium4
+          - x86_64
+        sdk:
+          - openwrt-22.03
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Building packages
+        uses: sbwml/openwrt-gh-action-sdk@go1.23
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.sdk }}
+          FEEDNAME: packages_ci
+          PACKAGES: luci-app-daed
+          NO_REFRESH_CHECK: true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.arch }}
+          path: bin/packages/${{ matrix.arch }}/packages_ci/*.ipk
+
+      - name: Remove v2ray-data
+        run: |
+          rm -rf bin/packages/${{ matrix.arch }}/packages_ci/v2ray-*
+
+      - name: Upload FTP
+        uses: sbwml/FTP-Deploy-Action@master
+        with:
+          server: ${{ secrets.ftp_address }}
+          username: ${{ secrets.ftp_username }}
+          password: ${{ secrets.ftp_password }}
+          server-dir: tmp/${{ matrix.arch }}/
+          local-dir: bin/packages/${{ matrix.arch }}/packages_ci/
+          dangerous-clean-slate: true
+
+      - name: Create metadata
+        run: |
+          sshpass -p ${{ secrets.server_password }} ssh -o StrictHostKeyChecking=no root@${{ secrets.ftp_address }} >/dev/null 2>&1
+          sshpass -p ${{ secrets.server_password }} ssh root@${{ secrets.ftp_address }} "/opt/sbin/opkg-sign ${{ matrix.arch }}"
+
