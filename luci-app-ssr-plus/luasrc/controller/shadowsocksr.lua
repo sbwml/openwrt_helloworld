@@ -24,9 +24,10 @@ local SUPPORTED_COMPONENTS = {
 	naiveproxy = true
 }
 local SUPPORTED_GEO_COMPONENTS = {
-	country_mmdb = true,
-	geosite = true,
-	v2ray_geo = true
+	{ name = "country_mmdb", require = nil },
+	{ name = "geosite", require = "/etc/openclash" },
+	{ name = "v2ray_geoip", require = nil },
+	{ name = "v2ray_geosite", require = nil }
 }
 
 local function trim(value)
@@ -576,7 +577,15 @@ local function read_component_state(component, action)
 end
 
 local function read_geo_state(component, action)
-	if not SUPPORTED_GEO_COMPONENTS[component] then
+	local is_supported = false
+	for _, item in ipairs(SUPPORTED_GEO_COMPONENTS) do
+		if item.name == component then
+			is_supported = true
+			break
+		end
+	end
+
+	if not is_supported then
 		return nil, 400, "unsupported_component"
 	end
 
@@ -649,6 +658,7 @@ function index()
 	entry({"admin", "services", "shadowsocksr", "component_set_mirror"}, call("component_set_mirror")).leaf = true
 	entry({"admin", "services", "shadowsocksr", "component_status"}, call("component_status")).leaf = true
 	entry({"admin", "services", "shadowsocksr", "component_upgrade"}, call("component_upgrade")).leaf = true
+	entry({"admin", "services", "shadowsocksr", "geo_component"}, call("geo_component")).leaf = true
 	entry({"admin", "services", "shadowsocksr", "geo_local_status"}, call("geo_local_status")).leaf = true
 	entry({"admin", "services", "shadowsocksr", "geo_status"}, call("geo_status")).leaf = true
 	entry({"admin", "services", "shadowsocksr", "geo_upgrade"}, call("geo_upgrade")).leaf = true
@@ -1016,6 +1026,20 @@ function geo_status()
 	write_geo_json(data)
 end
 
+function geo_component()
+	local component = {}
+	for _, item in ipairs(SUPPORTED_GEO_COMPONENTS) do
+		local available = true
+		if item.require then
+			available = nixio.fs.access(item.require)
+		end
+		if available then
+			table.insert(component, item.name)
+		end
+	end
+	write_geo_json({ component = component })
+end
+
 function geo_local_status()
 	local component = luci.http.formvalue("component")
 	local data, status, err = read_geo_state(component, "local_info")
@@ -1035,6 +1059,19 @@ function geo_upgrade()
 		write_geo_json({component = component, error = err or "bad_request", success = "0"})
 		return
 	end
+
+	local info = read_geo_state(component, "info")
+	if info then
+		for key, value in pairs(info) do
+			if data[key] == nil or data[key] == "" then
+				data[key] = value
+			end
+		end
+		if data.success == "1" then
+			data.can_upgrade = info.can_upgrade
+		end
+	end
+	
 	write_geo_json(data)
 end
 
