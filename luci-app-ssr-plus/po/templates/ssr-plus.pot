@@ -342,12 +342,12 @@ msgstr ""
 msgid "Certificate fingerprint"
 msgstr ""
 
-#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:36
+#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:39
 msgid ""
 "Certificate fingerprint retrieved successfully, but no input field found!"
 msgstr ""
 
-#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:73
+#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:76
 msgid "Certificate name retrieved successfully, but no input field found!"
 msgstr ""
 
@@ -941,7 +941,7 @@ msgid "Enter Custom Ports"
 msgstr ""
 
 #: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:17
-#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:54
+#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:57
 msgid "Error"
 msgstr ""
 
@@ -1027,7 +1027,7 @@ msgid "Failed to save custom client proxy rules."
 msgstr ""
 
 #: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:21
-#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:58
+#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:61
 msgid "Fetch Failed"
 msgstr ""
 
@@ -2042,6 +2042,10 @@ msgstr ""
 msgid "QUIC maxStreamReceiveWindow"
 msgstr ""
 
+#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:23
+msgid "QUIC protocols such as HY2 also require curl with http3 support."
+msgstr ""
+
 #: applications/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/client-config.lua:1439
 msgid "REALITY"
 msgstr ""
@@ -2153,6 +2157,10 @@ msgstr ""
 
 #: applications/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/server-config.lua:156
 msgid "Required for VMess/VLESS. Generate with: uuidgen"
+msgstr ""
+
+#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:22
+msgid "Requires OpenSSL to retrieve the TLS certificate chain fingerprint."
 msgstr ""
 
 #: applications/luci-app-ssr-plus/luasrc/model/cbi/shadowsocksr/client-config.lua:1335
@@ -2513,11 +2521,11 @@ msgstr ""
 msgid "Subscribe nodes allows insecure connection as TLS client (insecure)"
 msgstr ""
 
-#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:33
+#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:36
 msgid "Successfully retrieved certificate fingerprint:"
 msgstr ""
 
-#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:70
+#: applications/luci-app-ssr-plus/luasrc/view/shadowsocksr/server_header.htm:73
 msgid "Successfully retrieved certificate name:"
 msgstr ""
 
