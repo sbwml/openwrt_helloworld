@@ -650,8 +650,9 @@ function gen_uuid(format)
 	return uuid
 end
 
-function gen_short_uuid()
-	return sys.exec("echo -n $(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8)")
+function gen_short_uuid(length)
+	if not length then length = 8 end
+	return sys.exec("echo -n $(head /dev/urandom | tr -dc A-Za-z0-9 | head -c %s)" % length)
 end
 
 function uci_get_type(type, config, default)

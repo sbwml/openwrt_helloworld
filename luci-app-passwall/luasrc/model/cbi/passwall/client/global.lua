@@ -702,10 +702,10 @@ s2.anonymous = true
 s2.addremove = true
 s2.extedit = api.url("socks_config", "%s")
 function s2.create(e, t)
-	local uuid = api.gen_short_uuid()
-	t = uuid
-	TypedSection.create(e, t)
-	luci.http.redirect(e.extedit:format(t))
+	local uuid = api.gen_short_uuid(5)
+	uuid = "socks_" .. uuid
+	TypedSection.create(e, uuid)
+	luci.http.redirect(e.extedit:format(uuid))
 end
 function s2.remove(e, t)
 	local socks = "Socks_" .. t
