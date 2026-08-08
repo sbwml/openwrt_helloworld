@@ -189,7 +189,8 @@ function gen_outbound(flag, node, tag, proxy_table)
 					certificates = (node.tls_certificate == "1" and node.tls_certificate_pem ~= "") and {
 						certificate = api.split(node.tls_certificate_pem, "\n"),
 						usage = "verify"
-					} or nil
+					} or nil,
+					cipherSuites = node.cipherSuites or nil
 				} or nil,
 				realitySettings = (node.stream_security == "reality") and {
 					serverName = node.tls_serverName,
