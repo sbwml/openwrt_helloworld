@@ -94,11 +94,8 @@ msgstr "清除"
 msgid "Main switch"
 msgstr "主开关"
 
-msgid "TCP Node"
-msgstr "TCP 节点"
-
-msgid "UDP Node"
-msgstr "UDP 节点"
+msgid "Proxy Node"
+msgstr "代理节点"
 
 msgid "Edit Current Node"
 msgstr "编辑当前节点"
@@ -115,11 +112,11 @@ msgstr "当前节点"
 msgid "Listen Port"
 msgstr "监听端口"
 
+msgid "Port Status"
+msgstr "端口状态"
+
 msgid "0 is not use"
 msgstr "0 为不使用"
-
-msgid "Same as the tcp node"
-msgstr "与 TCP 节点相同"
 
 msgid "Current node: %s"
 msgstr "当前节点：%s"
@@ -139,8 +136,8 @@ msgstr "%s 不能为空。"
 msgid "Filter Mode"
 msgstr "过滤模式"
 
-msgid "TCP node must be '%s' type to use FakeDNS."
-msgstr "TCP 节点必须是 '%s' 类型才能使用 FakeDNS。"
+msgid "Node must be '%s' type to use FakeDNS."
+msgstr "节点必须是 '%s' 类型才能使用 FakeDNS。"
 
 msgid "Direct DNS"
 msgstr "直连 DNS"
@@ -430,8 +427,14 @@ msgstr "你确定要删除选择的节点吗？"
 msgid "You no select nodes !"
 msgstr "你没有选择任何节点！"
 
-msgid "Are you sure set to"
-msgstr "你确定要设为"
+msgid "Set as the main proxy node:"
+msgstr "应用为主代理节点："
+
+msgid "Set as the routing rule node:"
+msgstr "应用为分流规则节点："
+
+msgid "Are you sure set this node?"
+msgstr "你确定要设置这个节点吗？"
 
 msgid "the server?"
 msgstr "服务器吗？"
@@ -1448,8 +1451,17 @@ msgstr "私钥"
 msgid "Pre shared key"
 msgstr "额外的对称加密密钥"
 
+msgid "Allowed IPs"
+msgstr "允许的 IP"
+
+msgid "Generate key"
+msgstr "生成密钥"
+
 msgid "Local Address"
 msgstr "本地地址"
+
+msgid "System interface"
+msgstr "系统接口"
 
 msgid "Decimal numbers separated by \",\" or Base64-encoded strings."
 msgstr "用“,”隔开的十进制数字或 Base64 编码字符串。"
@@ -1508,18 +1520,6 @@ msgstr "配合伪装类型 DNS 使用，可随便填一个域名。"
 msgid "Auth"
 msgstr "身份认证"
 
-msgid "Socks for authentication"
-msgstr "Socks 认证方式"
-
-msgid "Socks protocol authentication, support anonymous and password."
-msgstr "Socks 协议的认证方式，支持匿名方式和账号密码方式。"
-
-msgid "anonymous"
-msgstr "匿名"
-
-msgid "User Password"
-msgstr "账号密码"
-
 msgid "This username already exists."
 msgstr "该用户名已存在。"
 
@@ -1537,18 +1537,6 @@ msgstr "IPv6 透明代理(TProxy)"
 
 msgid "Experimental feature. Make sure that your node supports IPv6."
 msgstr "实验特性，请确保你的节点支持IPv6"
-
-msgid "Status info"
-msgstr "状态信息"
-
-msgid "Big icon"
-msgstr "大图标"
-
-msgid "Show node check"
-msgstr "显示节点检测"
-
-msgid "Show Show IP111"
-msgstr "显示 IP111"
 
 msgid "Destination protocol"
 msgstr "目标协议"
@@ -1582,6 +1570,12 @@ msgstr "本机监听"
 
 msgid "When selected, it can only be accessed localhost."
 msgstr "当勾选时，只能本机访问。"
+
+msgid "Firewall Allow"
+msgstr "允许通过防火墙"
+
+msgid "Source zone"
+msgstr "源区域"
 
 msgid "Accept LAN Access"
 msgstr "接受局域网访问"
@@ -1639,9 +1633,6 @@ msgstr "日志"
 
 msgid "Enable Node Log"
 msgstr "启用节点日志"
-
-msgid "%s Node Log"
-msgstr "%s 节点日志"
 
 msgid "Log Level"
 msgstr "日志等级"
@@ -2148,8 +2139,8 @@ msgstr "调整分组"
 msgid "Reassign Node Group"
 msgstr "调整节点分组"
 
-msgid "Currently using %s node"
-msgstr "当前使用的 %s 节点"
+msgid "Currently using node"
+msgstr "当前使用的节点"
 
 msgid "Search nodes..."
 msgstr "搜索节点…"

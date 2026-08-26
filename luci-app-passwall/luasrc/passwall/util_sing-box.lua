@@ -1,10 +1,9 @@
 module("luci.passwall.util_sing-box", package.seeall)
 local api = require "luci.passwall.api"
-local uci = api.uci
 local sys = api.sys
 local jsonc = api.jsonc
-local appname = "passwall"
 local fs = api.fs
+local CACHE_PATH = api.CACHE_PATH
 local ech_domain = {}
 
 local local_version = api.get_app_version("sing-box"):match("[^v]+")
@@ -23,7 +22,7 @@ local GEO_VAR = {
 	IP_PATH = nil,
 	SITE_TAGS = {},
 	IP_TAGS = {},
-	TO_SRS_PATH = "/tmp/etc/" .. appname .."_tmp/singbox_srss/"
+	TO_SRS_PATH = CACHE_PATH .."/singbox_srss/"
 }
 
 function check_geoview()
@@ -34,7 +33,7 @@ function check_geoview()
 	if GEO_VAR.OK == 0 then
 		api.log("！！！注意：缺少 Geoview 组件或版本过低，Sing-Box 分流无法启用！")
 	else
-		GEO_VAR.DIR = GEO_VAR.DIR or (uci:get(appname, "@global_rules[0]", "v2ray_location_asset") or "/usr/share/v2ray/"):match("^(.*)/")
+		GEO_VAR.DIR = GEO_VAR.DIR or (api.uci_get_c("@global_rules[0]", "v2ray_location_asset") or "/usr/share/v2ray/"):match("^(.*)/")
 		GEO_VAR.SITE_PATH = GEO_VAR.SITE_PATH or (GEO_VAR.DIR .. "/geosite.dat")
 		GEO_VAR.IP_PATH = GEO_VAR.IP_PATH or (GEO_VAR.DIR .. "/geoip.dat")
 		if not fs.access(GEO_VAR.TO_SRS_PATH) then
@@ -120,8 +119,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 				config_file = string.format("%s_%s_%s_%s.json", flag, tag, node_id, new_port)
 			end
 			if run_socks_instance then
-				sys.call(string.format('/usr/share/%s/app.sh run_socks "%s"> /dev/null',
-					appname,
+				sys.call(string.format('/usr/share/passwall/app.sh run_socks "%s"> /dev/null',
 					string.format("flag=%s node=%s bind=%s socks_port=%s config_file=%s relay_port=%s",
 						new_port, --flag
 						node_id, --node
@@ -663,6 +661,8 @@ function gen_outbound(flag, node, tag, proxy_table)
 end
 
 function gen_config_server(node)
+	local endpoints = {}
+	local inbounds = {}
 	local outbounds = {
 		{ type = "direct", tag = "direct" }
 	}
@@ -762,7 +762,7 @@ function gen_config_server(node)
 	local inbound = {
 		type = node.protocol,
 		tag = "inbound",
-		listen = (node.bind_local == "1") and "127.0.0.1" or "::",
+		listen = "::",
 		listen_port = tonumber(node.port),
 	}
 
@@ -771,14 +771,14 @@ function gen_config_server(node)
 	if node.users and #node.users > 0 then
 		users = {}
 		for i, v in ipairs(node.users) do
-			local user = uci:get_all("passwall_server", v) or {}
+			local user = api.uci_get_s(v) or {}
 			if user[".type"] == "user" then
 				local u = {}
 				if node.protocol == "mixed" or node.protocol == "socks" or node.protocol == "http" or node.protocol == "naive" then
 					u.username = user.username
 					u.password = user.password
 				end
-				if node.protocol == "shadowsocks" or node.protocol == "trojan" then
+				if node.protocol == "shadowsocks" or node.protocol == "trojan" or node.protocol == "hysteria2" or node.protocol == "anytls" then
 					u.name = user.username
 					u.password = user.password
 				end
@@ -801,9 +801,11 @@ function gen_config_server(node)
 					u.password = user.password
 					u.uuid = user.uuid
 				end
-				if node.protocol == "hysteria2" then
-					u.name = user.username
-					u.password = user.password
+				if node.protocol == "wireguard" then
+					u.public_key = user.wireguard_public_key
+					u.pre_shared_key = user.wireguard_pre_shared_key
+					u.allowed_ips = user.allowed_ips or {}
+					u.persistent_keepalive_interval = 0
 				end
 				users[#users + 1] = u
 			end
@@ -972,6 +974,18 @@ function gen_config_server(node)
 		end
 	end
 
+	if node.protocol == "wireguard" then
+		inbound.listen = nil
+		inbound.system = node.wireguard_system_interface == "1" and true or false
+		inbound.name = "sbwg_" .. node[".name"]
+		inbound.mtu = tonumber(node.wireguard_mtu or 1408)
+		inbound.address = node.wireguard_local_address
+		inbound.private_key = node.wireguard_private_key
+		if users then
+			inbound.peers = users
+		end
+	end
+
 	if node.protocol == "direct" then
 		protocol_table = {
 			network = (node.d_protocol ~= "TCP,UDP") and node.d_protocol or nil,
@@ -984,6 +998,13 @@ function gen_config_server(node)
 		for key, value in pairs(protocol_table) do
 			inbound[key] = value
 		end
+	end
+
+	if node.protocol == "wireguard" then
+		inbound.listen = nil
+		table.insert(endpoints, inbound)
+	else
+		table.insert(inbounds, inbound)
 	end
 
 	local route = {
@@ -1008,7 +1029,7 @@ function gen_config_server(node)
 			}
 			sys.call(string.format("mkdir -p %s && touch %s/%s", api.TMP_IFACE_PATH, api.TMP_IFACE_PATH, node.outbound_node_iface))
 		else
-			local outbound_node_t = uci:get_all("passwall", node.outbound_node)
+			local outbound_node_t = api.uci_get_c(node.outbound_node)
 			if node.outbound_node == "_socks" or node.outbound_node == "_http" then
 				outbound_node_t = {
 					type = node.type,
@@ -1040,7 +1061,8 @@ function gen_config_server(node)
 				tag = "direct"
 			}}
 		},
-		inbounds = { inbound },
+		endpoints = endpoints,
+		inbounds = inbounds,
 		outbounds = outbounds,
 		route = route
 	}
@@ -1065,8 +1087,7 @@ function gen_config(var)
 	local server_host = var["server_host"]
 	local server_port = var["server_port"]
 	local tcp_proxy_way = var["tcp_proxy_way"]
-	local tcp_redir_port = var["tcp_redir_port"]
-	local udp_redir_port = var["udp_redir_port"]
+	local redir_port = var["redir_port"]
 	local local_socks_address = var["local_socks_address"] or "0.0.0.0"
 	local local_socks_port = var["local_socks_port"]
 	local local_socks_username = var["local_socks_username"]
@@ -1089,6 +1110,7 @@ function gen_config(var)
 	local remote_dns_client_ip = var["remote_dns_client_ip"]
 	local remote_dns_query_strategy = var["remote_dns_query_strategy"]
 	local remote_dns_fake = var["remote_dns_fake"]
+	local remote_rewrite_ttl = var["remote_rewrite_ttl"] or "30"
 	local dns_cache = var["dns_cache"]
 	local dns_socks_address = var["dns_socks_address"]
 	local dns_socks_port = var["dns_socks_port"]
@@ -1104,7 +1126,7 @@ function gen_config(var)
 	local rule_set_table = {}
 	local COMMON = {}
 
-	local singbox_settings = uci:get_all(appname, "@global_singbox[0]") or {}
+	local singbox_settings = api.uci_get_c("@global_singbox[0]") or {}
 
 	local route = {
 		rules = {}
@@ -1166,7 +1188,7 @@ function gen_config(var)
 	end
 
 	if node_id then
-		local node = uci:get_all(appname, node_id)
+		local node = api.uci_get_c(node_id)
 		if node then
 			if server_host and server_port then
 				node.address = server_host
@@ -1214,52 +1236,50 @@ function gen_config(var)
 			table.insert(inbounds, inbound)
 		end
 
-		if tcp_redir_port then
-			local inbound
+		if redir_port then
+			local inbound_tproxy = {
+				type = "tproxy",
+				tag = "tproxy",
+				listen = "::",
+				listen_port = tonumber(redir_port),
+			}
 			if tcp_proxy_way ~= "tproxy" then
-				inbound = {
+				local inbound = {
 					type = "redirect",
 					tag = "redirect_tcp",
 					listen = "::",
-					listen_port = tonumber(tcp_redir_port)
+					listen_port = tonumber(redir_port),
 				}
-			else
-				inbound = {
-					type = "tproxy",
-					tag = "tproxy_tcp",
-					network = "tcp",
-					listen = "::",
-					listen_port = tonumber(tcp_redir_port)
-				}
-			end
-			table.insert(inbounds, inbound)
-			table.insert(route.rules, {
-				action = "sniff",
-				inbound = inbound.tag
-			})
-		end
+				table.insert(inbounds, inbound)
+				table.insert(route.rules, {
+					action = "sniff",
+					inbound = inbound.tag
+				})
 
-		if udp_redir_port then
-			local inbound = {
-				type = "tproxy",
-				tag = "tproxy_udp",
-				network = "udp",
-				listen = "::",
-				listen_port = tonumber(udp_redir_port)
-			}
-			table.insert(inbounds, inbound)
+				inbound_tproxy.tag = "tproxy_udp"
+				inbound_tproxy.network = "udp"
+			end
+
+			table.insert(inbounds, inbound_tproxy)
 			table.insert(route.rules, {
 				action = "sniff",
-				inbound = inbound.tag
+				inbound = inbound_tproxy.tag
 			})
 		end
 
 		function get_node_by_id(node_id)
-			if not node_id or node_id == "" or node_id == "nil" then return nil end
-			local section = uci:get_all(appname, node_id) or {}
+			local section
+			if type(node_id) == "table" then
+				section = node_id
+			elseif type(node_id) == "string" then
+				if node_id == "" or node_id == "nil" then return nil end
+				section = api.uci_get_c(node_id) or {}
+			else
+				return nil
+			end
 			if section[".type"] == "socks" then
-				local result = {
-					[".name"] = node_id,
+				return {
+					[".name"] = section[".name"],
 					remarks = "socks[%s]" % section.port,
 					type = "sing-box",
 					protocol = "socks",
@@ -1267,7 +1287,6 @@ function gen_config(var)
 					port = section.port,
 					uot = "1"
 				}
-				return result
 			end
 			if section[".type"] == "nodes" then
 				return section
@@ -1292,7 +1311,7 @@ function gen_config(var)
 				ut_nodes = _node.urltest_node
 			end
 
-			api.log("  - 加载 Sing-Box URLTest 节点【" .. (_node.remarks or "") .. "】，子节点数量：" .. #(ut_nodes or {}))
+			-- api.log("  - 加载 Sing-Box URLTest 节点【" .. (_node.remarks or "") .. "】，子节点数量：" .. #(ut_nodes or {}))
 
 			local valid_nodes = {}
 			for i = 1, #(ut_nodes or {}) do
@@ -1434,12 +1453,7 @@ function gen_config(var)
 
 		function gen_outbound_get_tag(flag, node_id, tag, proxy_table)
 			if not node_id or node_id == "nil" then return nil end
-			local node
-			if type(node_id) == "string" then
-				node = get_node_by_id(node_id)
-			elseif type(node_id) == "table" then
-				node = node_id
-			end
+			local node = get_node_by_id(node_id)
 			if not tag then tag = node[".name"] end
 			if node then
 				if proxy_table.chain_proxy == "1" or proxy_table.chain_proxy == "2" then
@@ -1533,7 +1547,7 @@ function gen_config(var)
 
 			--shunt rule
 			local function foreach_shunt_rule(callback)
-				uci:foreach(appname, "shunt_rules", callback)
+				api.uci_foreach_c("shunt_rules", callback)
 
 				if use_gfw_list ~= "1" or chn_list ~= "0" then return end
 
@@ -1559,7 +1573,7 @@ function gen_config(var)
 
 				local bin = api.finded_com("geoview")
 				if bin then
-					local geo_file = (uci:get(appname, "@global_rules[0]", "v2ray_location_asset") or "/usr/share/v2ray/"):match("^(.*)/") .. "/geosite.dat"
+					local geo_file = (api.uci_get_c("@global_rules[0]", "v2ray_location_asset") or "/usr/share/v2ray/"):match("^(.*)/") .. "/geosite.dat"
 					if luci.sys.call('"' .. bin .. '" -type geosite -input "' .. geo_file .. '" | grep -q "^GFW$"') == 0 then
 						domain_list = (domain_list == "") and "geosite:gfw" or domain_list .. "\ngeosite:gfw"
 					end
@@ -1597,15 +1611,13 @@ function gen_config(var)
 					if e["inbound"] and e["inbound"] ~= "" then
 						inboundTag = {}
 						if e["inbound"]:find("tproxy") then
-							if tcp_redir_port then
+							if redir_port then
 								if tcp_proxy_way == "tproxy" then
-									table.insert(inboundTag, "tproxy_tcp")
+									table.insert(inboundTag, "tproxy")
 								else
 									table.insert(inboundTag, "redirect_tcp")
+									table.insert(inboundTag, "tproxy_udp")
 								end
-							end
-							if udp_redir_port then
-								table.insert(inboundTag, "tproxy_udp")
 							end
 						end
 						if e["inbound"]:find("socks") then
@@ -1964,7 +1976,7 @@ function gen_config(var)
 		local default_dns_flag = "remote"
 		if dns_socks_address and dns_socks_port then
 		else
-			if node_id and (tcp_redir_port or udp_redir_port) then
+			if node_id and redir_port then
 				local node = get_node_by_id(node_id)
 				if node.protocol == "_shunt" then
 					if node.default_node == "_direct" then
@@ -1975,7 +1987,7 @@ function gen_config(var)
 			end
 		end
 		dns.final = default_dns_flag
-		dns.strategy = default_dns_flag == "remote" and remote_strategy or direct_strategy
+		dns.strategy = "prefer_ipv6"
 
 		--按分流顺序DNS
 		if dns_domain_rules and #dns_domain_rules > 0 then
@@ -2017,7 +2029,7 @@ function gen_config(var)
 					end
 					if value.outboundTag ~= "block" and value.outboundTag ~= "direct" then
 						dns_rule.server = "remote"
-						dns_rule.rewrite_ttl = 30
+						dns_rule.rewrite_ttl = tonumber(remote_rewrite_ttl)
 						if true then
 							local block_rule
 							if remote_strategy == "ipv4_only" then
@@ -2065,11 +2077,25 @@ function gen_config(var)
 			end
 		end
 		if default_dns_flag == "remote" then
+			local block_rule
 			local dns_rule_query_type = { "A", "AAAA" }
 			if remote_strategy == "ipv4_only" then
+				block_rule = {
+					query_type = { "AAAA" },
+					action = "predefined",
+					rcode = "NOERROR"
+				}
 				dns_rule_query_type = { "A" }
 			elseif remote_strategy == "ipv6_only" then
+				block_rule = {
+					query_type = { "A" },
+					action = "predefined",
+					rcode = "NOERROR"
+				}
 				dns_rule_query_type = { "AAAA" }
+			end
+			if block_rule then
+				table.insert(dns.rules, block_rule)
 			end
 			if remote_dns_fake then
 				-- When default is not direct and enable fakedns, default DNS use FakeDNS.
@@ -2077,17 +2103,16 @@ function gen_config(var)
 					query_type = dns_rule_query_type,
 					server = fakedns_tag,
 					disable_cache = true,
-					rewrite_ttl = 30
+					rewrite_ttl = tonumber(remote_rewrite_ttl)
 				}
 				table.insert(dns.rules, fakedns_dns_rule)
-			else
-				local remote_dns_rule = {
-					query_type = dns_rule_query_type,
-					server = "remote",
-					disable_cache = true,
-				}
-				table.insert(dns.rules, remote_dns_rule)
 			end
+			local remote_dns_rule = {
+				server = "remote",
+				disable_cache = true,
+				rewrite_ttl = tonumber(remote_rewrite_ttl)
+			}
+			table.insert(dns.rules, remote_dns_rule)
 		end
 		local dns_in_inbound = {
 			type = "direct",

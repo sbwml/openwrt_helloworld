@@ -6,17 +6,11 @@ local sys = api.sys
 local uci = api.uci
 local jsonc = api.jsonc
 
-local CONFIG = "passwall_server"
-local CONFIG_PATH = "/tmp/etc/" .. CONFIG
-local NFT_INCLUDE_FILE = CONFIG_PATH .. "/" .. CONFIG .. ".nft"
+local CONFIG = api.s_config
+local CONFIG_PATH = api.S_TMP_PATH
 local LOG_APP_FILE = "/tmp/log/" .. CONFIG .. ".log"
 local TMP_BIN_PATH = CONFIG_PATH .. "/bin"
 local require_dir = "luci.passwall."
-
-local ipt_bin = sys.exec("echo -n $(/usr/share/passwall/iptables.sh get_ipt_bin)")
-local ip6t_bin = sys.exec("echo -n $(/usr/share/passwall/iptables.sh get_ip6t_bin)")
-
-local nft_flag = api.is_finded("fw4") and "1" or "0"
 
 local function log(...)
 	local f, err = io.open(LOG_APP_FILE, "a")
@@ -31,18 +25,6 @@ local function cmd(cmd)
 	sys.call(cmd)
 end
 
-local function ipt(arg)
-	if ipt_bin and #ipt_bin > 0 then
-		cmd(ipt_bin .. " -w " .. arg)
-	end
-end
-
-local function ip6t(arg)
-	if ip6t_bin and #ip6t_bin > 0 then
-		cmd(ip6t_bin .. " -w " .. arg)
-	end
-end
-
 local function ln_run(s, d, command, output)
 	if not output then
 		output = "/dev/null"
@@ -52,57 +34,39 @@ local function ln_run(s, d, command, output)
 	return string.format("%s >%s 2>&1 &", d .. " " .. command, output)
 end
 
-local function gen_include()
-	cmd(string.format("echo '#!/bin/sh' > /tmp/etc/%s.include", CONFIG))
-	local function extract_rules(n, a)
-		local _ipt = ipt_bin
-		if n == "6" then
-			_ipt = ip6t_bin
+local function remove_firewall_rules(defer_commit)
+	local to_delete = {}
+	uci:foreach("firewall", "rule", function(rule)
+		local name = rule[".name"]
+		if name and name:find(CONFIG, 1, true) == 1 then
+			table.insert(to_delete, name)
 		end
-		local result = "*" .. a
-		result = result .. "\n" .. sys.exec(_ipt .. '-save -t ' .. a .. ' | grep "PSW-SERVER" | sed -e "s/^-A \\(INPUT\\)/-I \\1 1/"')
-		result = result .. "COMMIT"
-		return result
-	end
-	local f, err = io.open("/tmp/etc/" .. CONFIG .. ".include", "a")
-	if f and err == nil then
-		if nft_flag == "0" then
-			f:write(ipt_bin .. '-save -c | grep -v "PSW-SERVER" | ' .. ipt_bin .. '-restore -c' .. "\n")
-			f:write(ipt_bin .. '-restore -n <<-EOT' .. "\n")
-			f:write(extract_rules("4", "filter") .. "\n")
-			f:write("EOT" .. "\n")
-			f:write(ip6t_bin .. '-save -c | grep -v "PSW-SERVER" | ' .. ip6t_bin .. '-restore -c' .. "\n")
-			f:write(ip6t_bin .. '-restore -n <<-EOT' .. "\n")
-			f:write(extract_rules("6", "filter") .. "\n")
-			f:write("EOT" .. "\n")
-			f:close()
-		else
-			f:write("nft -f " .. NFT_INCLUDE_FILE .. "\n")
-			f:close()
+	end)
+	if #to_delete > 0 then
+		for _, name in ipairs(to_delete) do
+			uci:delete("firewall", name)
 		end
+		if not defer_commit then
+			api.uci_save(uci, "firewall", true, true)
+		end
+		return true
 	end
+	return false
 end
 
 local function start()
-	local enabled = tonumber(uci:get(CONFIG, "@global[0]", "enable") or 0)
+	local enabled = tonumber(api.uci_get_s("@global[0]", "enable") or 0)
 	if enabled == nil or enabled == 0 then
 		return
 	end
+
+	-- 启动前清理所有旧防火墙规则
+	local fw_changed = remove_firewall_rules(true)
+
 	cmd(string.format("mkdir -p %s %s", CONFIG_PATH, TMP_BIN_PATH))
 	cmd(string.format("touch %s", LOG_APP_FILE))
-	if nft_flag == "0" then
-		ipt("-N PSW-SERVER")
-		ipt("-I INPUT -j PSW-SERVER")
-		ip6t("-N PSW-SERVER")
-		ip6t("-I INPUT -j PSW-SERVER")
-	else
-		nft_file, err = io.open(NFT_INCLUDE_FILE, "w")
-		nft_file:write('#!/usr/sbin/nft -f\n')
-		nft_file:write('add chain inet fw4 PSW-SERVER\n')
-		nft_file:write('flush chain inet fw4 PSW-SERVER\n')
-		nft_file:write('insert rule inet fw4 input position 0 jump PSW-SERVER comment "PSW-SERVER"\n')
-	end
-	uci:foreach(CONFIG, "server", function(server)
+	local firewall_num = 0
+	api.uci_foreach_s("server", function(server)
 		local id = server[".name"]
 		local enable = server.enable
 		if enable and tonumber(enable) == 1 then
@@ -125,7 +89,7 @@ local function start()
 				if server.auth and server.auth == "1" then
 					local user = nil
 					if server.user then
-						user = uci:get_all("passwall_server", server.user)
+						user = api.uci_get_s(server.user)
 					end
 					local username = user and user.username or ""
 					local password = user and user.password or ""
@@ -207,48 +171,27 @@ local function start()
 				cmd(bin)
 			end
 
-			local bind_local = server.bind_local or 0
-			if bind_local and tonumber(bind_local) ~= 1 and port then
-				if nft_flag == "0" then
-					ipt(string.format('-A PSW-SERVER -p tcp --dport %s -m comment --comment "%s" -j ACCEPT', port, remarks))
-					ip6t(string.format('-A PSW-SERVER -p tcp --dport %s -m comment --comment "%s" -j ACCEPT', port, remarks))
-					if udp_forward == 1 then
-						ipt(string.format('-A PSW-SERVER -p udp --dport %s -m comment --comment "%s" -j ACCEPT', port, remarks))
-						ip6t(string.format('-A PSW-SERVER -p udp --dport %s -m comment --comment "%s" -j ACCEPT', port, remarks))
-					end
-				else
-					nft_file:write(string.format('add rule inet fw4 PSW-SERVER meta l4proto tcp tcp dport {%s} counter accept comment "%s"\n', port, remarks))
-					if udp_forward == 1 then
-						nft_file:write(string.format('add rule inet fw4 PSW-SERVER meta l4proto udp udp dport {%s} counter accept comment "%s"\n', port, remarks))
-					end
-				end
+			local firewall_allow = server.firewall_allow
+			if firewall_allow == "1" then
+				firewall_num = firewall_num + 1
+				local uid = CONFIG .. "_" .. id
+				uci:section("firewall", "rule", uid)
+				uci:set("firewall", uid, "name", uid)
+				uci:set("firewall", uid, "src", server.firewall_allow_src or "wan")
+				uci:set("firewall", uid, "dest_port", port)
+				uci:set("firewall", uid, "target", "ACCEPT")
 			end
 		end
 	end)
-	if nft_flag == "1" then
-		nft_file:write("add rule inet fw4 PSW-SERVER return\n")
-		nft_file:close()
-		cmd("nft -f " .. NFT_INCLUDE_FILE)
+	if firewall_num > 0 or fw_changed then
+		api.uci_save(uci, "firewall", true, true)
 	end
-	gen_include()
 end
 
 local function stop()
 	cmd(string.format("/bin/busybox top -bn1 | grep -v 'grep' | grep '%s/' | awk '{print $1}' | xargs kill -9 >/dev/null 2>&1", CONFIG_PATH))
-	if nft_flag == "0" then
-		ipt("-D INPUT -j PSW-SERVER 2>/dev/null")
-		ipt("-F PSW-SERVER 2>/dev/null")
-		ipt("-X PSW-SERVER 2>/dev/null")
-		ip6t("-D INPUT -j PSW-SERVER 2>/dev/null")
-		ip6t("-F PSW-SERVER 2>/dev/null")
-		ip6t("-X PSW-SERVER 2>/dev/null")
-	else
-		local nft_cmd = "handles=$(nft -a list chain inet fw4 input | grep -E \"PSW-SERVER\" | awk -F '# handle ' '{print$2}')\n for handle in $handles; do\n nft delete rule inet fw4 input handle ${handle} 2>/dev/null\n done"
-		cmd(nft_cmd)
-		cmd("nft flush chain inet fw4 PSW-SERVER 2>/dev/null")
-		cmd("nft delete chain inet fw4 PSW-SERVER 2>/dev/null")
-	end
-	cmd(string.format("rm -rf %s %s /tmp/etc/%s.include", CONFIG_PATH, LOG_APP_FILE, CONFIG))
+	remove_firewall_rules()
+	cmd(string.format("rm -rf %s %s", CONFIG_PATH, LOG_APP_FILE))
 end
 
 if action then

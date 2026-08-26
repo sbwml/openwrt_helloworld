@@ -1,14 +1,10 @@
 local api = require "luci.passwall.api"
-local appname = "passwall"
-
 api.set_default_cbi()
 
-m = Map(appname)
-api.set_apply_on_parse(m)
+m = Map()
 
 -- [[ Other Settings ]]--
-s = m:section(TypedSection, "global_other")
-s.anonymous = true
+s = m:section(NamedSection, "@global_other[0]", "global_other")
 
 o = s:option(ListValue, "auto_detection_time", translate("Automatic detection delay"))
 o:value("0", translate("Close"))
@@ -29,28 +25,25 @@ o:value("https://wifi.vivo.com.cn/generate_204", "VIVO (CN)")
 o.default = o.keylist[3]
 
 if true then
-    local o = Template(appname .. "/node_list/node_list")
-    o.map = m
-    o.api = api
-    m:append(o)
+	m:appendTemplate("/node_list/node_list")
 
-    if luci.http.formvalue("cbi.submit") == "1" then
-        local group_order = {}
-        group_order = luci.http.formvaluetable("group.order")
-        if group_order then
-            for k, v in pairs(group_order) do
-                if v and v~= "" then
-                    local new_order = {}
-                    string.gsub(v, "[^" .. " " .. "]+", function(w)
-                        new_order[#new_order + 1] = w
-                    end)
-                    for idx, name in ipairs(new_order) do
-                        m.uci:reorder(appname, name, idx - 1)
-                    end
-                end
-            end
-        end
-    end
+	if luci.http.formvalue("cbi.submit") == "1" then
+		local group_order = {}
+		group_order = luci.http.formvaluetable("group.order")
+		if group_order then
+			for k, v in pairs(group_order) do
+				if v and v~= "" then
+					local new_order = {}
+					string.gsub(v, "[^" .. " " .. "]+", function(w)
+						new_order[#new_order + 1] = w
+					end)
+					for idx, name in ipairs(new_order) do
+						m.uci:reorder(m.config, name, idx - 1)
+					end
+				end
+			end
+		end
+	end
 end
 
 return api.return_map(m)

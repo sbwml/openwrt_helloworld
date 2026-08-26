@@ -1,12 +1,11 @@
 module("luci.passwall.util_shadowsocks", package.seeall)
 local api = require "luci.passwall.api"
-local uci = api.uci
 local jsonc = api.jsonc
 
 function gen_config_server(node)
 	local user = nil
 	if node.user then
-		user = uci:get_all("passwall_server", node.user)
+		user = api.uci_get_s(node.user)
 	end
 	local config = {}
 	config.server_port = tonumber(node.port)
@@ -40,7 +39,7 @@ function gen_config(var)
 		print("node 不能为空")
 		return
 	end
-	local node = uci:get_all("passwall", node_id)
+	local node = api.uci_get_c(node_id)
 	local server_host = var["server_host"] or (node.address or ""):lower()
 	local server_port = var["server_port"] or node.port
 	local local_addr = var["local_addr"]
@@ -54,10 +53,8 @@ function gen_config(var)
 	local local_http_port = var["local_http_port"]
 	local local_http_username = var["local_http_username"]
 	local local_http_password = var["local_http_password"]
-	local local_tcp_redir_port = var["local_tcp_redir_port"]
-	local local_tcp_redir_address = var["local_tcp_redir_address"] or "0.0.0.0"
-	local local_udp_redir_port = var["local_udp_redir_port"]
-	local local_udp_redir_address = var["local_udp_redir_address"] or "0.0.0.0"
+	local local_redir_port = var["local_redir_port"]
+	local local_redir_address = var["local_redir_address"] or "0.0.0.0"
 
 	if api.is_ipv6(server_host) then
 		server_host = api.get_ipv6_only(server_host)
@@ -119,21 +116,13 @@ function gen_config(var)
 				local_port = tonumber(local_http_port)
 			})
 		end
-		if local_tcp_redir_address and local_tcp_redir_port then
+		if local_redir_address and local_redir_port then
 			table.insert(config.locals, {
 				protocol = "redir",
-				mode = "tcp_only",
+				mode = "tcp_and_udp",
 				tcp_redir = var["tcp_tproxy"] and "tproxy" or nil,
-				local_address = local_tcp_redir_address,
-				local_port = tonumber(local_tcp_redir_port)
-			})
-		end
-		if local_udp_redir_address and local_udp_redir_port then
-			table.insert(config.locals, {
-				protocol = "redir",
-				mode = "udp_only",
-				local_address = local_udp_redir_address,
-				local_port = tonumber(local_udp_redir_port)
+				local_address = local_redir_address,
+				local_port = tonumber(local_redir_port)
 			})
 		end
 	end
