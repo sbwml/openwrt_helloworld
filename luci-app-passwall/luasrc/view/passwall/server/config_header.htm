@@ -3,6 +3,13 @@ local map = self.map
 local api = map.api
 local section = self.section
 -%>
+<style>
+	:is([id*="singbox_users"], [id*="xray_users"]) .cbi-dropdown li[data-value="-"],
+	:is([id*="singbox_users"], [id*="xray_users"]) .cbi-dropdown .preview li[data-value="-"],
+	:is([id*="singbox_users"], [id*="xray_users"]) .cbi-dropdown input[type="text"] {
+		display: none !important;
+	}
+</style>
 <script type="text/javascript">
 	//<![CDATA[
 	function server_update_config(cfgid, data, redirect_url) {
