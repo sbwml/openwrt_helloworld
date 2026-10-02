@@ -2961,7 +2961,7 @@ msgstr "用户密钥"
 msgid ""
 "User keys for multi-user authentication. Format: <code>userkey</code> or "
 "<code>name:userkey</code>."
-msgstr "用于多用户认证的用户密钥。格式：<code><userkey></code> 或 <code><name>:<code>name:userkey</code>。"
+msgstr "用于多用户认证的用户密钥。格式：<code>userkey</code> 或 <code>name:userkey</code>。"
 
 #: htdocs/luci-static/resources/view/homeproxy/node.js:1463
 msgid "User-Agent"
