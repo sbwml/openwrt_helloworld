@@ -872,7 +872,7 @@ function create_backup()
 	local date = os.date("%y%m%d%H%M")
 	local tar_file = "/tmp/passwall-" .. date .. "-backup.tar.gz"
 	local version_file = "/tmp/passwall-version"
-	local version = api.get_version()
+	local version = api.get_version():match("^([^-]+)")
 	api.remove(tar_file)
 	fs.writefile(version_file, version .. "\n")
 	local cmd = "tar -czf " .. tar_file .. " " .. table.concat(backup_files, " ") .. " " .. "-C /tmp passwall-version"

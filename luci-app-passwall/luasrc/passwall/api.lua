@@ -981,9 +981,16 @@ function compare_versions(ver1, comp, ver2)
 	local n2 = table.getn(av2)
 	if (max < n2) then max = n2 end
 
+	local function version_part(value)
+		local number = tonumber(value)
+		if number then return number end
+		local revision = type(value) == "string" and value:match("^[rR](%d+)$")
+		return tonumber(revision) or 0
+	end
+
 	for i = 1, max, 1 do
-		local s1 = tonumber(av1[i] or 0) or 0
-		local s2 = tonumber(av2[i] or 0) or 0
+		local s1 = version_part(av1[i] or 0)
+		local s2 = version_part(av2[i] or 0)
 
 		if comp == "~=" and (s1 ~= s2) then return true end
 		if (comp == "<" or comp == "<=") and (s1 < s2) then return true end
@@ -1442,38 +1449,33 @@ function get_version()
 			fs.writefile(version_file, version)
 		end
 	end
-	return version:match("^([^-]+)") or ""
+	version = (version or ""):match("^%s*(.-)%s*$")
+	-- Normalize APK's -rN release notation while retaining the release number.
+	return version:gsub("%-r(%d+)$", "-%1")
 end
 
 function to_check_self()
-	local url = "https://raw.githubusercontent.com/Openwrt-Passwall/openwrt-passwall/main/luci-app-passwall/Makefile"
-	local tmp_file = "/tmp/passwall_makefile"
-	local gh_proxy = uci_get_c("@global_app[0]", "gh_proxy_url") or ""
-	local return_code, result
-	if gh_proxy ~= "" then
-		url = gh_proxy .. url
-		return_code, result = curl_base(url, tmp_file, curl_args)
-	else
-		return_code, result = curl_auto(url, tmp_file, curl_args)
+	local release = get_api_json(com.passwall:get_url())
+	if type(release) == "table" and #release > 0 then
+		release = release[1]
 	end
-	result = return_code == 0
-	if not result then
-		exec("/bin/rm", {"-f", tmp_file})
+	if type(release) ~= "table" or not release.tag_name then
 		return {
 			code = 1,
-			error = i18n.translatef("Failed")
+			error = i18n.translate("Get remote version info failed.")
 		}
 	end
 	local local_version  = get_version()
-	local remote_version = sys.exec("echo -n $(grep '^PKG_VERSION' /tmp/passwall_makefile | head -n 1 | awk -F '=' '{print $2}')")
-	exec("/bin/rm", {"-f", tmp_file})
-
+	-- Keep the release suffix (-1, -2, ...) so package revisions are compared too.
+	local remote_version = release.tag_name:gsub("^v", "")
 	local has_update = compare_versions(local_version, "<", remote_version)
 	if not has_update then
 		return {
 			code = 0,
 			local_version = local_version,
-			remote_version = remote_version
+			remote_version = remote_version,
+			html_url = release.html_url,
+			data = release.assets or {}
 		}
 	end
 	return {
@@ -1481,6 +1483,8 @@ function to_check_self()
 		has_update = true,
 		local_version = local_version,
 		remote_version = remote_version,
+		html_url = release.html_url,
+		data = release.assets or {},
 		error = i18n.translatef("The latest version: %s, currently does not support automatic update, if you need to update, please compile or download the ipk and then manually install.", remote_version)
 	}
 end
