@@ -1,5 +1,5 @@
 diff --git a/luci-app-ssr-plus/Makefile b/luci-app-ssr-plus/Makefile
-index 7fc8c9b..8be77c6 100644
+index c7941e9..e004c72 100644
 --- a/luci-app-ssr-plus/Makefile
 +++ b/luci-app-ssr-plus/Makefile
 @@ -48,6 +48,7 @@ LUCI_DEPENDS:= \
