@@ -1,5 +1,5 @@
 diff --git a/luci-app-ssr-plus/Makefile b/luci-app-ssr-plus/Makefile
-index 425251a..876afb8 100644
+index a0b0f83..47c49e6 100644
 --- a/luci-app-ssr-plus/Makefile
 +++ b/luci-app-ssr-plus/Makefile
 @@ -48,6 +48,7 @@ LUCI_DEPENDS:= \
@@ -10,7 +10,7 @@ index 425251a..876afb8 100644
  
  choice
  	prompt "Transparent Proxy Backend"
-@@ -171,6 +172,7 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Libev_Server
+@@ -170,6 +171,7 @@ config PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR_Libev_Server
  	bool "Include ShadowsocksR Libev Server"
  	default n
  
