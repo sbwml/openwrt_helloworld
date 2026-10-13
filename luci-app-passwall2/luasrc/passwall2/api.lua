@@ -7,6 +7,7 @@ c_config = "passwall2"
 s_config = "passwall2_server"
 local com = require "luci.passwall2.com"
 nixio = require "nixio"
+require "nixio.util"
 fs = require "nixio.fs"
 sys = require "luci.sys"
 uci = require"luci.model.uci".cursor()
@@ -17,6 +18,7 @@ i18n = require "luci.i18n"
 
 curl_args = { "-skfL", "--connect-timeout 3", "--retry 3", "-H 'Accept: */*'" }
 command_timeout = 300
+DIRECT_GID = 9912
 OPENWRT_ARCH = nil
 DISTRIB_ARCH = nil
 
@@ -226,6 +228,30 @@ function exec_call(cmd)
 	return tonumber(rc), trim(out)
 end
 
+function exec_call_as_gid(cmd, gid)
+	local reader, writer = nixio.pipe()
+	if not reader then return 255, "Unable to create command pipe" end
+	local pid = nixio.fork()
+	if not pid then
+		reader:close()
+		writer:close()
+		return 255, "Unable to fork command"
+	elseif pid == 0 then
+		reader:close()
+		nixio.dup(writer, nixio.stdout)
+		nixio.dup(writer, nixio.stderr)
+		writer:close()
+		if not nixio.setgid(gid) then os.exit(1) end
+		nixio.exec("/bin/sh", "-c", cmd)
+		os.exit(127)
+	end
+	writer:close()
+	local out = reader:readall() or ""
+	reader:close()
+	local _, status, code = nixio.waitpid(pid)
+	return status == "exited" and code or 255, trim(out)
+end
+
 function base64Decode(text)
 	if type(text) ~= "string" then return "" end
 	local encoded = text:gsub("%z", ""):gsub("%c", ""):gsub("_", "/"):gsub("-", "+"):gsub("=+$", "")
@@ -274,22 +300,38 @@ function get_domain_port_from_url(url)
 	return domain, port
 end
 
--- Domain resolution
-function domainToIPv4(domain, dns)
-	local Dns = dns or "223.5.5.5"
-	local IPs = luci.sys.exec('nslookup %s %s | awk \'/^Name:/{getline; if ($1 == "Address:") print $2}\'' % { domain, Dns })
-	for IP in string.gmatch(IPs, "%S+") do
-		if datatypes.ipaddr(IP) and not datatypes.ip6addr(IP) then return IP end
+function resolve_domain(domain, dns)
+	dns = dns or get_cache_var("DIRECT_DNS") or "223.5.5.5"
+	local address, port = dns:match("^(.-)#(%d+)$")
+	if not address then address, port = dns:match("^%[(.-)%]:(%d+)$") end
+	if not address then address, port = dns:match("^([^:]+):(%d+)$") end
+	address = (address or dns):gsub("^%[(.-)%]$", "%1")
+	port = port or "53"
+	local server = datatypes.ip6addr(address) and ("[" .. address .. "]") or address
+	local rc, result
+	for _, dns_server in ipairs({server .. ":" .. port, address .. "#" .. port, "223.5.5.5"}) do
+		rc, result = exec_call_as_gid("LC_ALL=C nslookup " .. util.shellquote(domain) .. " " .. util.shellquote(dns_server), DIRECT_GID)
+		local ips, seen, answer = {}, {}, false
+		for line in result:gmatch("[^\r\n]+") do
+			if line:match("^%s*Name:") then answer = true end
+			local ip = answer and line:match("^%s*Address%s*%d*:%s*(%S+)")
+			if ip and (datatypes.ip4addr(ip) or datatypes.ip6addr(ip)) and not seen[ip] then
+				ips[#ips + 1] = ip
+				seen[ip] = true
+			end
+		end
+		if #ips > 0 then return ips end
 	end
-	return nil
+	return nil, result, rc
 end
 
-function curl_base(url, file, args)
+function curl_base(url, file, args, gid)
 	if not args then args = {} end
 	if file then
 		args[#args + 1] = "-o " .. file
 	end
 	local cmd = string.format('curl %s "%s"', table_join(args), url)
+	if gid then return exec_call_as_gid(cmd, gid) end
 	return exec_call(cmd)
 end
 
@@ -311,36 +353,34 @@ end
 function curl_logic(url, file, args)
 	local return_code, result = curl_proxy(url, file, args)
 	if not return_code or return_code ~= 0 then
-		return_code, result = curl_base(url, file, args)
+		return_code, result = curl_direct(url, file, args)
 	end
 	return return_code, result
 end
 
 function curl_direct(url, file, args)
-	-- Direct access
-	if not args then args = {} end
-	local tmp_args = clone(args)
+	if get_cache_var("ENABLED_DEFAULT_ACL") ~= "1" and get_cache_var("ENABLED_ACLS") ~= "1" then
+		return curl_base(url, file, args)
+	end
+	local tmp_args = clone(args or {})
+	tmp_args[#tmp_args + 1] = "--noproxy '*'"
 	local domain, port = get_domain_port_from_url(url)
 	if domain then
-		local ip = domainToIPv4(domain)
-		if ip then
-			tmp_args[#tmp_args + 1] = "--resolve " .. domain .. ":" .. port .. ":" .. ip
+		local ips, err = resolve_domain(domain)
+		if not ips then return 6, err end
+		for i, ip in ipairs(ips) do
+			if datatypes.ip6addr(ip) then ips[i] = "[" .. ip .. "]" end
 		end
+		tmp_args[#tmp_args + 1] = "--resolve " .. util.shellquote(domain .. ":" .. port .. ":" .. table.concat(ips, ","))
 	end
-	return curl_base(url, file, tmp_args)
+	return curl_base(url, file, tmp_args, DIRECT_GID)
 end
 
 function curl_auto(url, file, args)
-	local localhost_proxy = uci_get_c("@global[0]", "localhost_proxy") or "1"
-	if localhost_proxy == "1" then
+	if (uci_get_c("@global[0]", "localhost_proxy") or "1") == "1" then
 		return curl_base(url, file, args)
-	else
-		local return_code, result = curl_proxy(url, file, args)
-		if not return_code or return_code ~= 0 then
-			return_code, result = curl_direct(url, file, args)
-		end
-		return return_code, result
 	end
+	return curl_logic(url, file, args)
 end
 
 function url(...)
@@ -1123,7 +1163,7 @@ local default_file_tree = {
 }
 
 function get_api_json(url)
-	local return_code, content = curl_logic(url, nil, curl_args)
+	local return_code, content = curl_auto(url, nil, curl_args)
 	if return_code ~= 0 or content == "" then return {} end
 	return jsonc.parse(content) or {}
 end
@@ -1240,7 +1280,7 @@ function to_download(app_name, url, size)
 	local _curl_args = clone(curl_args)
 	table.insert(_curl_args, "--speed-limit 51200 --speed-time 15 --max-time 300")
 
-	local return_code, result = curl_logic(url, tmp_file, _curl_args)
+	local return_code, result = curl_auto(url, tmp_file, _curl_args)
 	result = return_code == 0
 
 	if not result then
