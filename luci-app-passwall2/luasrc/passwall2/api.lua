@@ -199,7 +199,7 @@ function del_cache_var(key)
 end
 
 function set_cache_var(key, val)
-	sys.call(string.format('. /usr/share/passwall2/utils.sh ; set_cache_var "%s" "%s"', key, val))
+	sys.call(string.format('. /usr/share/passwall2/utils.sh ; set_cache_var %s %s', util.shellquote(tostring(key)), util.shellquote(tostring(val))))
 end
 
 function get_cache_var(key)
@@ -893,18 +893,25 @@ function clone(org)
 end
 
 local function get_bin_version_cache(file, cmd)
-	sys.call("mkdir -p " .. CACHE_PATH)
-	if fs.access(file) then
+	if file and file ~= "" and fs.access(file) then
 		chmod_755(file)
-		local md5 = sys.exec("echo -n $(md5sum " .. file .. " | awk '{print $1}')")
-		if fs.access(CACHE_PATH .. "/" .. md5) then
-			return sys.exec("echo -n $(cat %s)" % { CACHE_PATH .. "/" .. md5 })
-		else
-			local version = sys.exec(string.format("echo -n $(%s %s)", file, cmd))
-			if version and version ~= "" then
-				sys.call("echo '%s' > %s"  % { version, CACHE_PATH .. "/" .. md5})
-				return version
+		local stat = fs.stat(file)
+		local cache_file
+		if stat and stat.dev and stat.ino and stat.size and stat.mtime and stat.ctime then
+			-- Use metadata to avoid hashing the entire binary on every lookup.
+			cache_file = CACHE_PATH .. "/binver_" .. table.concat({stat.dev, stat.ino, stat.size, stat.mtime, stat.ctime}, "_")
+			local cached = fs.readfile(cache_file)
+			if cached and trim(cached) ~= "" then
+				return trim(cached)
 			end
+		end
+		local version = sys.exec(string.format("echo -n $(%s %s)", util.shellquote(file), cmd))
+		if version and version ~= "" then
+			if cache_file then
+				fs.mkdirr(CACHE_PATH)
+				fs.writefile(cache_file, version)
+			end
+			return version
 		end
 	end
 	return ""
@@ -926,7 +933,7 @@ end
 
 function is_file(path)
 	if path and #path > 1 then
-		if sys.exec('[ -f "%s" ] && echo -n 1' % path) == "1" then
+		if fs.stat(path, "type") == "reg" then
 			return true
 		end
 	end
@@ -935,7 +942,7 @@ end
 
 function is_dir(path)
 	if path and #path > 1 then
-		if sys.exec('[ -d "%s" ] && echo -n 1' % path) == "1" then
+		if fs.stat(path, "type") == "dir" then
 			return true
 		end
 	end
@@ -1256,7 +1263,7 @@ function to_check(arch, app_name)
 	}
 end
 
-function to_download(app_name, url, size)
+function to_download(app_name, url, size, task_id)
 	local result = check_path(app_name)
 	if result.code ~= 0 then
 		return result
@@ -1268,7 +1275,13 @@ function to_download(app_name, url, size)
 
 	sys.call("/bin/rm -f /tmp/".. app_name .."_download.*")
 
-	local tmp_file = trim(util.exec("mktemp -u -t ".. app_name .."_download.XXXXXX"))
+	local tmp_file
+	if type(task_id) == "string" and task_id:match("^[%w_-]+$") then
+		tmp_file = "/tmp/" .. app_name .. "_download." .. task_id
+		exec("/bin/rm", {"-f", tmp_file})
+	else
+		tmp_file = trim(util.exec("mktemp -u -t " .. app_name .. "_download.XXXXXX"))
+	end
 
 	if size then
 		local kb1 = get_free_space("/tmp")
@@ -1292,6 +1305,23 @@ function to_download(app_name, url, size)
 	end
 
 	return {code = 0, file = tmp_file, zip = com[app_name].zipped }
+end
+
+function to_download_progress(app_name, task_id, total_size)
+	if not com[app_name] or type(task_id) ~= "string" or not task_id:match("^[%w_-]+$") then
+		return {code = 1, error = i18n.translate("Invalid download task.")}
+	end
+
+	total_size = tonumber(total_size) or 0
+	local tmp_file = "/tmp/" .. app_name .. "_download." .. task_id
+	local downloaded = tonumber(fs.stat(tmp_file, "size")) or 0
+	local percent
+	if total_size > 0 then
+		-- Leave 100% for the download request's success callback.
+		percent = math.min(99, math.floor(downloaded * 100 / total_size))
+	end
+
+	return {code = 0, downloaded = downloaded, total = total_size, percent = percent}
 end
 
 function to_extract(app_name, file, subfix)
@@ -1486,7 +1516,7 @@ function cacheFileCompareToLogic(file, str)
 end
 
 function is_js_luci()
-	return sys.call('[ -f "/www/luci-static/resources/uci.js" ]') == 0
+	return fs.stat("/www/luci-static/resources/uci.js", "type") == "reg"
 end
 
 function set_default_cbi()
@@ -1557,6 +1587,16 @@ function set_default_cbi()
 			end
 			self:append(obj)
 			return obj
+		end
+	end
+	if true then
+		--Table
+		local Table = cbi.Table
+		local default_init = Table.__init__
+		function Table.__init__(self, form, ...)
+			default_init(self, form, ...)
+			-- The Table's map is an independent data source and needs to receive the API from its parent form.
+			self.map.api = form.api
 		end
 	end
 	if true then
