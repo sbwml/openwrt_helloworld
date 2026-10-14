@@ -682,7 +682,7 @@ if has_smartdns then
 	end
 	o:depends({dns_shunt = "smartdns", log_smartdns = "1"})
 
-	if api.fs.access("/usr/lib/smartdns_ui.so") then
+	if api.fs.access("/usr/lib/smartdns_ui.so") or api.fs.access("/usr/lib/smartdns/smartdns_ui.so") then
 		o = s:taboption("log", Flag, "smartdns_ui", "SmartDNS " .. translate("Enable WebUI"))
 		o.default = "0"
 		o.rmempty = false

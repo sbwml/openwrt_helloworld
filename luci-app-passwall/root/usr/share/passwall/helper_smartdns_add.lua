@@ -124,7 +124,9 @@ if LOG_SIZE < 1 or LOG_SIZE % 1 ~= 0 then LOG_SIZE = 1 end
 if UI_PORT < 1 or UI_PORT > 65535 or UI_PORT % 1 ~= 0 then UI_PORT = 9880 end
 if UI_LOG_MAX_AGE < 1 or UI_LOG_MAX_AGE % 1 ~= 0 then UI_LOG_MAX_AGE = 7 end
 if not UI_DATA_DIR or UI_DATA_DIR == "" then UI_DATA_DIR = SMARTDNS_DATA_PATH end
-local ENABLE_UI = UI and fs.access("/usr/lib/smartdns_ui.so")
+local UI_PLUGIN = "/usr/lib/smartdns_ui.so"
+if not fs.access(UI_PLUGIN) then UI_PLUGIN = "/usr/lib/smartdns/smartdns_ui.so" end
+local ENABLE_UI = UI and fs.access(UI_PLUGIN)
 local data_dir = ENABLE_UI and UI_DATA_DIR or SMARTDNS_DATA_PATH
 if data_dir ~= SMARTDNS_DATA_PATH then
 	sys.call("mkdir -p " .. api.util.shellquote(data_dir))
@@ -189,7 +191,7 @@ config_lines = {
 }
 if ENABLE_UI then
 	merge_array(config_lines, {
-		"plugin /usr/lib/smartdns_ui.so",
+		"plugin " .. UI_PLUGIN,
 		"smartdns-ui.www-root /usr/share/smartdns/wwwroot",
 		"smartdns-ui.ip http://[::]:" .. UI_PORT,
 		"smartdns-ui.max-query-log-age " .. (UI_LOG_MAX_AGE * 86400)
