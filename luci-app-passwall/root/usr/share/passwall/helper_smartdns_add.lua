@@ -160,6 +160,8 @@ if REMOTE_DNS then
 end
 local AUTO_GROUP = "auto"
 local auto_config_lines = {}
+-- 直连规则显式覆盖远程兜底的缓存、IPv6、测速和双栈优选设置。
+local DIRECT_RULE_OPTIONS = " -enable-cache -address -6 -speed-check-mode ping,tcp:80,tcp:443 -response-mode first-ping -d yes"
 --设置默认 DNS 分组(兜底组)，全局代理模式仍使用远程组。
 local DEFAULT_DNS_GROUP = (USE_DEFAULT_DNS == "direct" and "direct") or
                           (USE_DEFAULT_DNS == "remote" and "proxy") or
@@ -326,7 +328,8 @@ table.insert(config_lines, force_qtype_soa)
 if DEFAULT_DNS_GROUP then
 	local domain_rules_str = "domain-rules /./ -nameserver " .. DEFAULT_DNS_GROUP
 	if DEFAULT_DNS_GROUP == "proxy" then
-		domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no -no-serve-expired"
+		-- 代理仍禁止写入缓存，去掉会被直连继承且无法反向覆盖的过期缓存限制。
+		domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no"
 		domain_rules_str = domain_rules_str .. " -address " .. ((only_global and IS_SHUNT_NODE) and "-6" or (NO_PROXY_IPV6 == "1" and "#6" or "-6"))
 	end
 	table.insert(config_lines, domain_rules_str)
@@ -430,7 +433,7 @@ if is_file_nonzero(file_vpslist) then
 		"#4:" .. setflag .. "psw_vps",
 		"#6:" .. setflag .. "psw_vps6"
 	}
-	local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver direct', domain_set_name)
+	local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver direct', domain_set_name) .. DIRECT_RULE_OPTIONS
 	domain_rules_str = domain_rules_str .. " " .. set_type .. " " .. table.concat(sets, ",")
 	table.insert(tmp_lines, domain_rules_str)
 	insert_array_after(config_lines, tmp_lines, "#--9")
@@ -495,7 +498,7 @@ if USE_DIRECT_LIST == "1" and is_file_nonzero(file_direct_host) then
 		"#4:" .. setflag .. "psw_white",
 		"#6:" .. setflag .. "psw_white6"
 	}
-	local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver direct', domain_set_name)
+	local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver direct', domain_set_name) .. DIRECT_RULE_OPTIONS
 	domain_rules_str = domain_rules_str .. " " .. set_type .. " " .. table.concat(sets, ",")
 	table.insert(tmp_lines, domain_rules_str)
 	insert_array_after(config_lines, tmp_lines, "#--7")
@@ -558,7 +561,6 @@ if USE_PROXY_LIST == "1" and is_file_nonzero(file_proxy_host) then
 	}
 	local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver proxy', domain_set_name)
 	domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no"
-	domain_rules_str = domain_rules_str .. " -no-serve-expired"
 	local sets = {
 		"#4:" .. setflag .. "psw_black"
 	}
@@ -581,7 +583,6 @@ if USE_GFW_LIST == "1" and is_file_nonzero(RULES_PATH .. "/gfwlist") then
 	}
 	local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver proxy', domain_set_name)
 	domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no"
-	domain_rules_str = domain_rules_str .. " -no-serve-expired"
 	local sets = {
 		"#4:" .. setflag .. "psw_gfw"
 	}
@@ -608,7 +609,7 @@ if CHN_LIST ~= "0" and is_file_nonzero(RULES_PATH .. "/chnlist") then
 			"#4:" .. setflag .. "psw_chn",
 			"#6:" .. setflag .. "psw_chn6"
 		}
-		local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver direct', domain_set_name)
+		local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver direct', domain_set_name) .. DIRECT_RULE_OPTIONS
 		domain_rules_str = domain_rules_str .. " " .. set_type .. " " .. table.concat(sets, ",")
 		table.insert(tmp_lines, domain_rules_str)
 		insert_array_after(config_lines, tmp_lines, "#--4")
@@ -619,7 +620,6 @@ if CHN_LIST ~= "0" and is_file_nonzero(RULES_PATH .. "/chnlist") then
 	if CHN_LIST == "proxy" then
 		local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver proxy', domain_set_name)
 		domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no"
-		domain_rules_str = domain_rules_str .. " -no-serve-expired"
 		local sets = {
 			"#4:" .. setflag .. "psw_chn"
 		}
@@ -768,7 +768,7 @@ if IS_SHUNT_NODE and not only_global then
 			string.format("domain-set -name %s -file %s", domain_set_name, shunt_direct_host)
 		}
 		local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver proxy', domain_set_name)
-		domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no -no-serve-expired"
+		domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no"
 		local sets = {
 			"#4:" .. setflag .. "psw_shunt",
 			"#6:" .. setflag .. "psw_shunt6"
@@ -784,7 +784,7 @@ if IS_SHUNT_NODE and not only_global then
 			string.format("domain-set -name %s -file %s", domain_set_name, shunt_proxy_host)
 		}
 		local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver proxy', domain_set_name)
-		domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no -no-serve-expired"
+		domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no"
 		local sets = {
 			"#4:" .. setflag .. "psw_shunt",
 			"#6:" .. setflag .. "psw_shunt6"
@@ -800,7 +800,7 @@ if IS_SHUNT_NODE and not only_global then
 			string.format("domain-set -name %s -file %s", domain_set_name, shunt_black_host)
 		}
 		local domain_rules_str = string.format('domain-rules /domain-set:%s/ -nameserver proxy', domain_set_name)
-		domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no -no-serve-expired"
+		domain_rules_str = domain_rules_str .. " -no-cache -speed-check-mode none -d no"
 		local sets = {
 			"#4:" .. setflag .. "psw_shunt",
 			"#6:" .. setflag .. "psw_shunt6"
