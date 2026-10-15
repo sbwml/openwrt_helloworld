@@ -133,7 +133,6 @@ if data_dir ~= SMARTDNS_DATA_PATH then
 end
 
 local LOCAL_SERVERS = {}
-local SERVER_TYPES = {udp = "server", tcp = "server-tcp"}
 for endpoint in string.gmatch(LOCAL_DNS or "", "[^,]+") do
 	endpoint = api.trim(endpoint)
 	local protocol, address = endpoint:match("^(%w+)://(.+)$")
@@ -146,8 +145,8 @@ for endpoint in string.gmatch(LOCAL_DNS or "", "[^,]+") do
 	elseif datatypes.ip6addr(address) and not address:find("[", 1, true) then
 		address = "[" .. address .. "]"
 	end
-	if SERVER_TYPES[protocol] and address ~= "" then
-		table.insert(LOCAL_SERVERS, SERVER_TYPES[protocol] .. " " .. address)
+	if (protocol == "udp" or protocol == "tcp") and address ~= "" then
+		table.insert(LOCAL_SERVERS, "server " .. (protocol == "tcp" and "tcp://" or "") .. address)
 	end
 end
 if #LOCAL_SERVERS == 0 then
@@ -242,48 +241,12 @@ end
 
 if DNS_MODE == "socks" then
 	for w in string.gmatch(REMOTE_DNS, '[^|]+') do
-		local server_dns = api.trim(w)
-		local server_param
-
-		local dnsType = string.match(server_dns, "^(.-)://")
-		dnsType = dnsType and string.lower(dnsType) or nil
-		local dnsServer = string.match(server_dns, "://(.+)") or server_dns
-
-		if dnsType and dnsType ~= "" and dnsType ~= "udp" then
-			if dnsType == "tcp" then
-				server_param = "server-tcp " .. dnsServer
-			elseif dnsType == "tls" then
-				server_param = "server-tls " .. dnsServer
-			elseif dnsType == "quic" then
-				server_param = "server-quic " .. dnsServer
-			elseif dnsType == "https" or dnsType == "h3" then
-				local http_host = nil
-				local url = w
-				local port = 443
-				local s = api.split(w, ",")
-				if s and #s > 1 then
-					url = s[1]
-					local dns_ip = s[2]
-					local host_port = api.get_domain_from_url(s[1])
-					if host_port and #host_port > 0 then
-						http_host = host_port
-						local s2 = api.split(host_port, ":")
-						if s2 and #s2 > 1 then
-							http_host = s2[1]
-							port = s2[2]
-						end 
-						url = url:gsub(http_host, dns_ip)
-					end
-				end
-				server_dns = url
-				if http_host then
-					server_dns = server_dns .. " -http-host " .. http_host
-				end
-				server_param = (dnsType == "https" and "server-https " or "server-h3 ") .. server_dns
-			end
-		else
-			server_param = "server " .. dnsServer
-
+		-- 协议和默认端口由 SmartDNS 根据原始 URL 识别。
+		local dns = api.split(api.trim(w), ",")
+		local server_param = "server " .. api.trim(dns[1])
+		if dns[2] and dns[2] ~= "" then
+			-- 保留 URL 中的域名，固定连接 IP 交给 SmartDNS 处理，避免手动替换影响 SNI 和 HTTP Host。
+			server_param = server_param .. " -host-ip " .. api.trim(dns[2]):gsub("^%[(.*)%]$", "%1")
 		end
 
 		if not api.is_local_ip(w) then
