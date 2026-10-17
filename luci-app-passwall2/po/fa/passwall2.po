@@ -2486,6 +2486,9 @@ msgstr "فهرست مجموعه‌های رمز پشتیبانی‌شده را �
 msgid "This username already exists."
 msgstr "این نام کاربری از قبل وجود دارد."
 
+msgid "Update Options"
+msgstr "گزینه‌های به‌روزرسانی"
+
 msgid "MASQUE Path"
 msgstr "مسیر MASQUE"
 

@@ -2478,6 +2478,9 @@ msgstr "配置支援的密碼套件列表。"
 msgid "This username already exists."
 msgstr "該用戶名已存在。"
 
+msgid "Update Options"
+msgstr "更新選項"
+
 msgid "MASQUE Path"
 msgstr "MASQUE 路徑"
 

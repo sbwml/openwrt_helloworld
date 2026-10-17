@@ -2487,6 +2487,9 @@ msgstr "Задает список поддерживаемых наборов ш
 msgid "This username already exists."
 msgstr "Это имя пользователя уже существует."
 
+msgid "Update Options"
+msgstr "Параметры обновления"
+
 msgid "MASQUE Path"
 msgstr "Путь MASQUE"
 

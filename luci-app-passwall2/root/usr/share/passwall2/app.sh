@@ -619,6 +619,9 @@ start_crontab() {
 		return
 	}
 
+	local setsid_cmd=""
+	command -v setsid >/dev/null 2>&1 && setsid_cmd="setsid "
+
 	stop_week_mode=$(config_n_get @global_delay[0] stop_week_mode)
 	stop_time_mode=$(config_n_get @global_delay[0] stop_time_mode)
 	if [ -n "$stop_week_mode" ]; then
@@ -626,7 +629,7 @@ start_crontab() {
 		stop_time_mm=$(echo $stop_time_mode | awk -F ':' '{print $2}')
 		local t="$stop_time_mm $stop_time_hh * * $stop_week_mode"
 		[ "$stop_week_mode" = "7" ] && t="$stop_time_mm $stop_time_hh * * *"
-		echo "$t /etc/init.d/$CONFIG stop cron > /dev/null 2>&1 &" >>/etc/crontabs/root
+		echo "$t ${setsid_cmd}/etc/init.d/$CONFIG stop cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 		log_i18n 0 "Scheduled tasks: Auto stop service."
 	fi
 
@@ -637,7 +640,7 @@ start_crontab() {
 		start_time_mm=$(echo $start_time_mode | awk -F ':' '{print $2}')
 		local t="$start_time_mm $start_time_hh * * $start_week_mode"
 		[ "$start_week_mode" = "7" ] && t="$start_time_mm $start_time_hh * * *"
-		echo "$t /etc/init.d/$CONFIG start cron > /dev/null 2>&1 &" >>/etc/crontabs/root
+		echo "$t ${setsid_cmd}/etc/init.d/$CONFIG start cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 		log_i18n 0 "Scheduled tasks: Auto start service."
 	fi
 
@@ -651,7 +654,7 @@ start_crontab() {
 		if [ "$restart_week_mode" = "8" ]; then
 			update_loop=1
 		else
-			echo "$t /etc/init.d/$CONFIG restart cron > /dev/null 2>&1 &" >>/etc/crontabs/root
+			echo "$t ${setsid_cmd}/etc/init.d/$CONFIG restart cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 		fi
 		log_i18n 0 "Scheduled tasks: Auto restart service."
 	fi
@@ -666,7 +669,7 @@ start_crontab() {
 		if [ "$rules_update_week_mode" = "8" ]; then
 			update_loop=1
 		else
-			echo "$t lua $APP_PATH/rule_update.lua log all cron > /dev/null 2>&1 &" >>/etc/crontabs/root
+			echo "$t ${setsid_cmd}lua $APP_PATH/rule_update.lua log all cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 		fi
 		log_i18n 0 "Scheduled tasks: Auto update rules."
 	fi
@@ -695,7 +698,7 @@ start_crontab() {
 			if [ "$sub_update_week_mode" = "8" ]; then
 				update_loop=1
 			else
-				echo "$t lua $APP_PATH/subscribe.lua start $cfgids cron > /dev/null 2>&1 &" >>/etc/crontabs/root
+				echo "$t ${setsid_cmd}lua $APP_PATH/subscribe.lua start $cfgids cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 			fi
 		done
 		rm -rf $TMP_SUB_PATH
