@@ -897,6 +897,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			result.method = method
 			result.ss_method = method
 			result.password = password
+			result.uot = params.uot
 			result.tcp_fast_open = params.tfo
 			result.use_finalmask = (params.fm and params.fm ~= "") and "1" or nil
 			result.finalmask = (params.fm and params.fm ~= "") and api.base64Encode(params.fm) or nil
@@ -1051,7 +1052,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 					end
 					local insecure = params.allowinsecure or params.allowInsecure or params.insecure
 					result.tls_allowInsecure = (insecure == "1" or insecure == "0") and insecure or (sub_allowinsecure and "1" or "0")
-					result.uot = params.udp
+					result.uot = params.uot or params.udp
 				else
 					result.error_msg = "请更换 Xray 或 Sing-Box 来支持 SS 更多的传输方式。"
 				end
@@ -1432,7 +1433,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 		for _, v in pairs(split(query[2], '&')) do
 			local s = v:find("=", 1, true)
 			if s and s > 1 then
-				params[v:sub(1, s - 1)] = v:sub(s + 1)
+				params[v:sub(1, s - 1)] = UrlDecode(v:sub(s + 1))
 			end
 		end
 		-- [2001:4860:4860::8888]:443
@@ -1459,6 +1460,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 		result.hysteria_up_mbps = params.upmbps or sub_hy_up_mbps
 		result.hysteria_down_mbps = params.downmbps or sub_hy_down_mbps
 		result.hysteria_hop = params.mport
+		result.tls_CertByName = params.vcn
 
 	elseif szType == 'hysteria2' or szType == 'hy2' then
 		local alias = ""
@@ -1502,6 +1504,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 		result.hysteria2_up_mbps = params.upmbps or (sub_cfg and sub_hy_up_mbps or nil)
 		result.hysteria2_down_mbps = params.downmbps or (sub_cfg and sub_hy_down_mbps or nil)
 		result.hysteria2_hop = params.mport
+		result.hysteria2_hop_interval = params.hopinterval or params["hop-interval"]
 		if params.ech and params.ech ~= "" then
 			result.ech = "1"
 			result.ech_config = params.ech
@@ -1581,6 +1584,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 		end
 		result.tls_serverName = params.sni
 		result.tls_disable_sni = params.disable_sni
+		result.tls_CertByName = params.vcn
 		result.tls_pinSHA256 = params.pcs or params.pinsha256
 		result.tuic_alpn = params.alpn or "h3"
 		result.tuic_congestion_control = params.congestion_control or "cubic"
