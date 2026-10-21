@@ -935,6 +935,45 @@ if server.v2ray_protocol == "naive" or server.v2ray_protocol == "shadowsocksr" o
     ob.mux = nil
 end
 
+if server.type == "v2ray" and server.transport == "kcptun" then
+    local supported = {vmess = true, vless = true, trojan = true, shadowsocks = true, socks = true, http = true}
+    assert(supported[server.v2ray_protocol], "Kcptun requires a supported stream proxy protocol")
+    assert(server.tls ~= "1" and server.reality ~= "1" and server.xtls ~= "1", "Kcptun cannot be combined with stream TLS or REALITY")
+    assert(server.kcp_enable ~= "1", "Native Kcptun cannot be combined with the external Kcptun client")
+    assert(not server.tls_flow or server.tls_flow == "", "Kcptun cannot be combined with XTLS flow")
+    local options = {}
+    if server.xray_kcptun_options and server.xray_kcptun_options:match("%S") then
+        assert(server.xray_kcptun_options:match("^%s*{"), "Kcptun options must be a JSON object")
+        options = json.parse(server.xray_kcptun_options)
+        assert(type(options) == "table", "Kcptun options must be a JSON object")
+    end
+    options.key = server.xray_kcptun_key
+    options.crypt = server.xray_kcptun_crypt or "aes"
+    options.mode = server.xray_kcptun_mode or "fast"
+    options.smuxver = tonumber(server.xray_kcptun_smuxver) or 1
+    options.nocomp = server.xray_kcptun_nocomp == "1"
+    options.conn = tonumber(server.xray_kcptun_conn) or 1
+    Xray.outbounds[1].streamSettings.kcptunSettings = options
+end
+
+if server.type == "v2ray" and server.xray_shadowtls == "1" then
+    local supported = {vmess = true, vless = true, trojan = true, shadowsocks = true}
+    assert(supported[server.v2ray_protocol], "ShadowTLS requires a supported TCP proxy protocol")
+    assert((server.transport or "raw") == "raw" or server.transport == "tcp", "ShadowTLS requires RAW/TCP")
+    assert(server.tls ~= "1" and server.reality ~= "1", "ShadowTLS cannot be combined with TLS or REALITY")
+    assert(not server.tls_flow or server.tls_flow == "", "ShadowTLS cannot be combined with XTLS flow")
+    local stream = Xray.outbounds[1].streamSettings
+    stream.security = "shadowtls"
+    stream.shadowtlsSettings = {
+        version = tonumber(server.xray_shadowtls_version) or 3,
+        password = server.xray_shadowtls_password,
+        serverName = server.xray_shadowtls_sni,
+        fingerprint = server.xray_shadowtls_fingerprint or "chrome",
+        strictMode = server.xray_shadowtls_strict ~= "0",
+        allowInsecure = server.xray_shadowtls_insecure == "1"
+    }
+end
+
 if xray_builtin_dns then
 	table.insert(Xray.outbounds, {
 		protocol = "dns",
