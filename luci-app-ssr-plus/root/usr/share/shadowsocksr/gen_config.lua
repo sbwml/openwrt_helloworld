@@ -363,6 +363,34 @@ function outbound:handleIndex(index)
 		trojan = function()
 			trojan_shadowsocks()
 		end,
+		snell = function()
+            outbound_settings = {
+                address = server.server, port = tonumber(server.server_port),
+                psk = server.snell_psk, version = tonumber(server.snell_version) or 4,
+                obfs = server.snell_obfs or "", obfsHost = server.snell_obfs_host,
+                reuse = server.snell_reuse == "1"
+            }
+        end,
+		tuic = function()
+            local version = tonumber(server.xray_tuic_version) or 5
+            local alpn = {}
+            for value in (server.tuic_alpn or ""):gmatch("[^,]+") do alpn[#alpn + 1] = value end
+            if #alpn == 0 then alpn = {"h3"} end
+            outbound_settings = {
+                address = server.server, port = tonumber(server.server_port), version = version,
+                token = version == 4 and server.xray_tuic_token or nil,
+                uuid = version == 5 and server.tuic_uuid or nil,
+                password = version == 5 and server.tuic_passwd or nil,
+                serverName = server.tls_host, certificateFile = server.xray_tuic_ca,
+                allowInsecure = server.insecure == "1",
+                alpn = alpn,
+                congestionControl = server.congestion_control or "cubic",
+                udpRelayMode = server.udp_relay_mode or "native",
+                heartbeatInterval = (tonumber(server.heartbeat) or 10) * 1000,
+                requestTimeout = (tonumber(server.timeout) or 8) * 1000,
+                reduceRtt = server.zero_rtt_handshake == "1"
+            }
+        end,
 		shadowsocksr = function()
             outbound_settings = {
                 address = server.server, port = tonumber(server.server_port),
@@ -899,9 +927,9 @@ Xray.outbounds = {
 	}
 }
 
--- Naive owns TLS/multiplexing; SSR owns obfuscation and uses native UDP.
--- Preserve Xray socket marks and dialer chains for both.
-if server.v2ray_protocol == "naive" or server.v2ray_protocol == "shadowsocksr" then
+-- These protocols own their framing, obfuscation and multiplexing.
+-- Preserve Xray socket marks and dialer chains.
+if server.v2ray_protocol == "naive" or server.v2ray_protocol == "shadowsocksr" or server.v2ray_protocol == "tuic" or server.v2ray_protocol == "snell" then
     local ob = Xray.outbounds[1]
     ob.streamSettings = { network = "raw", sockopt = ob.streamSettings.sockopt }
     ob.mux = nil
@@ -1322,6 +1350,14 @@ function config:handleIndex(index)
 				chain_switch[ChainType]()
 			end
 		end,
+		snell = function()
+            outbound_settings = {
+                address = server.server, port = tonumber(server.server_port),
+                psk = server.snell_psk, version = tonumber(server.snell_version) or 4,
+                obfs = server.snell_obfs or "", obfsHost = server.snell_obfs_host,
+                reuse = server.snell_reuse == "1"
+            }
+        end,
 		tuic = function()
 			print(json.stringify(tuic, 1))
 		end

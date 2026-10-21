@@ -74,6 +74,9 @@ then
 end
 if nixio.fs.access("/usr/bin/xray") or nixio.fs.access("/usr/libexec/xray") then
 	o:value("naive", "NaiveProxy (Xray)")
+	o:value("tuic", "TUIC (Xray)")
+	o:value("snell", "Snell (Xray)")
+	o:value("anytls", "AnyTLS (Xray)")
 end
 o.default = "socks5"
 
@@ -235,6 +238,8 @@ o = s:option(Value, "tls_certificateFile", translate("Certificate File Path"))
 o.description = translate("e.g.: /etc/ssl/fullchain.pem")
 o.rmempty = true
 o:depends("tls", "1")
+o:depends("type", "tuic")
+o:depends("type", "anytls")
 
 o:depends("type", "naive")
 
@@ -242,6 +247,8 @@ o = s:option(Value, "tls_keyFile", translate("Private Key File Path"))
 o.description = translate("e.g.: /etc/ssl/private.key")
 o.rmempty = true
 o:depends("tls", "1")
+o:depends("type", "tuic")
+o:depends("type", "anytls")
 
 -- ========== 传输层设置 (Transport) ==========
 o:depends("type", "naive")
@@ -410,5 +417,38 @@ o:value("h3", "HTTP/3")
 o:value("h2,h3", "HTTP/2 + HTTP/3")
 o.default = "h2"
 o:depends("type", "naive")
+
+-- TUIC credentials are independent of the legacy server settings.
+for _, field in ipairs({{"tuic_uuid", "TUIC UUID"}, {"tuic_password", "TUIC Password"}, {"tuic_token", "TUIC v4 Token"}}) do
+	o = s:option(Value, field[1], field[2])
+	o.password = field[1] ~= "tuic_uuid"
+	o:depends("type", "tuic")
+end
+
+o = s:option(Value, "snell_psk", translate("Snell PSK"))
+o.password = true
+o:depends("type", "snell")
+o = s:option(ListValue, "snell_version", translate("Snell Version"))
+for _, version in ipairs({"1", "2", "3", "4", "5"}) do o:value(version, "v" .. version) end
+o.default = "4"
+o:depends("type", "snell")
+o = s:option(ListValue, "snell_obfs", translate("Snell Obfs"))
+o:value("", translate("Disable"))
+o:value("http", "HTTP")
+o:value("tls", "TLS")
+o:depends("type", "snell")
+o = s:option(Flag, "snell_udp", translate("UDP Relay"))
+o.default = "1"
+for _, version in ipairs({"3", "4", "5"}) do
+	o:depends({type = "snell", snell_version = version})
+end
+
+o = s:option(Value, "anytls_password", translate("Password"))
+o.password = true
+o:depends("type", "anytls")
+o = s:option(TextValue, "anytls_padding", "AnyTLS Padding Scheme")
+o.rows = 5
+o.rmempty = true
+o:depends("type", "anytls")
 
 return m
