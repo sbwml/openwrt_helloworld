@@ -338,9 +338,14 @@ function resolve_domain(domain, dns)
 	address = (address or dns):gsub("^%[(.-)%]$", "%1")
 	port = port or "53"
 	local server = datatypes.ip6addr(address) and ("[" .. address .. "]") or address
+	local dns_servers = {server .. ":" .. port, address .. "#" .. port, "223.5.5.5"}
+	local version = sys.exec("LC_ALL=C busybox nslookup -v 2>&1"):match("BusyBox v(%d+%.%d+%.%d+)")
+	if version and compare_versions(version, "<", "1.35.0") then
+		dns_servers[1], dns_servers[2] = dns_servers[2], dns_servers[1]
+	end
 	local rc, result
-	for _, dns_server in ipairs({server .. ":" .. port, address .. "#" .. port, "223.5.5.5"}) do
-		rc, result = exec_call_as_gid("LC_ALL=C nslookup " .. util.shellquote(domain) .. " " .. util.shellquote(dns_server), DIRECT_GID)
+	for _, dns_server in ipairs(dns_servers) do
+		rc, result = exec_call_as_gid("LC_ALL=C busybox nslookup " .. util.shellquote(domain) .. " " .. util.shellquote(dns_server), DIRECT_GID)
 		local ips, seen, answer = {}, {}, false
 		for line in result:gmatch("[^\r\n]+") do
 			if line:match("^%s*Name:") then answer = true end
