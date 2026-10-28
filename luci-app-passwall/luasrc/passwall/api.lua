@@ -246,9 +246,9 @@ end
 
 function UrlEncode(szText)
 	if type(szText) ~= "string" then return "" end
-	return szText:gsub("([^%w%-_%.%~])", function(c)
+	return (szText:gsub("([^%w%-_%.%~])", function(c)
 		return string.format("%%%02X", string.byte(c))
-	end)
+	end))
 end
 
 function UrlDecode(szText)
@@ -1401,9 +1401,11 @@ function to_download_progress(app_name, task_id, total_size)
 
 	total_size = tonumber(total_size) or 0
 	local tmp_file = "/tmp/" .. app_name .. "_download." .. task_id
-	local downloaded = tonumber(fs.stat(tmp_file, "size")) or 0
+	local downloaded
 	if app_name == appname then
-		downloaded = (tonumber(fs.stat(tmp_file .. "1", "size")) or 0) + (tonumber(fs.stat(tmp_file .. "2", "size")) or 0)
+		downloaded = (tonumber((fs.stat(tmp_file .. "1", "size"))) or 0) + (tonumber((fs.stat(tmp_file .. "2", "size"))) or 0)
+	else
+		downloaded = tonumber((fs.stat(tmp_file, "size"))) or 0
 	end
 	local percent
 	if total_size > 0 then
@@ -1558,7 +1560,7 @@ function get_version()
 	end
 	version = (version or ""):match("^%s*(.-)%s*$")
 	-- Normalize APK's -rN release notation while retaining the release number.
-	return version:gsub("%-r(%d+)$", "-%1")
+	return (version:gsub("%-r(%d+)$", "-%1"))
 end
 
 function to_check_self()
