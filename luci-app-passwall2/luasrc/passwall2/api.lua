@@ -1533,7 +1533,6 @@ function to_move(app_name,file)
 		end
 	end
 
-	-- Complete preflight before stopping an otherwise working proxy.
 	local flag = sys.call('busybox pgrep -af "passwall2/.*'.. app_name ..'" >/dev/null')
 	if flag == 0 then
 		sys.call("/etc/init.d/passwall2 stop")
