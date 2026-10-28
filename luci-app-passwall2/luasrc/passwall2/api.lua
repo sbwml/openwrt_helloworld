@@ -276,9 +276,9 @@ end
 
 function UrlEncode(szText)
 	if type(szText) ~= "string" then return "" end
-	return szText:gsub("([^%w%-_%.%~])", function(c)
+	return (szText:gsub("([^%w%-_%.%~])", function(c)
 		return string.format("%%%02X", string.byte(c))
-	end)
+	end))
 end
 
 function UrlDecode(szText)
@@ -1413,12 +1413,14 @@ function to_download_progress(app_name, task_id, total_size)
 
 	total_size = tonumber(total_size) or 0
 	local tmp_file = "/tmp/" .. app_name .. "_download." .. task_id
-	local downloaded = tonumber(fs.stat(tmp_file, "size")) or 0
+	local downloaded
 	if app_name == appname then
 		downloaded = 0
 		for part = 1, 5 do
-			downloaded = downloaded + (tonumber(fs.stat(tmp_file .. part, "size")) or 0)
+			downloaded = downloaded + (tonumber((fs.stat(tmp_file .. part, "size"))) or 0)
 		end
+	else
+		downloaded = tonumber((fs.stat(tmp_file, "size"))) or 0
 	end
 	local percent
 	if total_size > 0 then
