@@ -39,9 +39,15 @@ table td, .table .td {
 
 #set_node_div {
 	display: none;
-	width: 30rem;
+	width: 90%;
+	max-width: 30rem;
+	max-height: 90vh;
+	box-sizing: border-box;
+	overflow-y: auto;
 	position: fixed;
-	top:45%;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
 	z-index: 99;
 	text-align: center;
 	background: white;
