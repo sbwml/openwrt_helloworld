@@ -876,20 +876,6 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 				password = hostInfo[1]  --一些链接用明文uuid做密码
 			end
 
-			-- 判断密码是否经过url编码
-			local function isURLEncodedPassword(pwd)
-				if not pwd:find("%%[0-9A-Fa-f][0-9A-Fa-f]") then
-					return false
-				end
-				local ok, decoded = pcall(UrlDecode, pwd)
-				return ok and UrlEncode(decoded) == pwd
-			end
-
-			local decoded = UrlDecode(password)
-			if isURLEncodedPassword(password) and decoded then
-				password = decoded
-			end
-
 			local _method = (method or "none"):lower()
 			method = (_method == "chacha20-poly1305" and "chacha20-ietf-poly1305") or
 				(_method == "xchacha20-poly1305" and "xchacha20-ietf-poly1305") or _method
@@ -1682,13 +1668,13 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			local contents = split(content, "@")
 			local auth = contents[1] or ""
 			local idx = auth:find(":", 1, true)
-			if not idx then --修正某些链接会把username和password之间的:进行编码
-				auth = UrlDecode(auth)
-				idx = auth:find(":", 1, true)
-			end
+			-- 先按明文冒号拆分，再分别解码；没有分隔符时整个 userinfo 是密码。
 			if idx then
 				result.username = UrlDecode(auth:sub(1, idx - 1))
 				result.password = UrlDecode(auth:sub(idx + 1))
+			else
+				result.username = ""
+				result.password = UrlDecode(auth)
 			end
 			Info = (contents[2] or ""):gsub("/%?", "?")
 		end
