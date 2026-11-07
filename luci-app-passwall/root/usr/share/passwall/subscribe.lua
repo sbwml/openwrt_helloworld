@@ -2266,6 +2266,7 @@ elseif arg[1] == "add" then
 	local f = assert(io.open("/tmp/links.conf", 'r'))
 	local raw = f:read('*all')
 	f:close()
+	raw = parseClashNode(raw, arg[2])
 	parse_link(raw, "1", arg[2])
 	if update_node(1) then uci_save(true) end
 	api.remove("/tmp/links.conf")
