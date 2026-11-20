@@ -1,17 +1,48 @@
+include $(TOPDIR)/rules.mk
 
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
- "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-  <head>
-    <title>503 Backend.max_conn reached</title>
-  </head>
-  <body>
-    <h1>Error 503 Backend.max_conn reached</h1>
-    <p>Backend.max_conn reached</p>
-    <h3>Error 54113</h3>
-    <p>Details: cache-bur-kbur8200052-BUR 1795147272 1311625630</p>
-    <hr>
-    <p>Varnish cache server</p>
-  </body>
-</html>
+PKG_NAME:=geoview
+PKG_VERSION:=0.2.9
+PKG_RELEASE:=1
+
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=https://codeload.github.com/snowie2000/geoview/tar.gz/$(PKG_VERSION)?
+PKG_HASH:=b080a141505a3180c3b81468304864e4373c4868680ff39fb82ee6973e3b5e94
+
+PKG_LICENSE:=Apache-2.0
+PKG_LICENSE_FILES:=LICENSE
+PKG_MAINTAINER:=snowie2000
+
+PKG_BUILD_DEPENDS:=golang/host
+PKG_BUILD_PARALLEL:=1
+PKG_USE_MIPS16:=0
+PKG_BUILD_FLAGS:=no-mips16
+
+GO_PKG:=github.com/snowie2000/geoview
+GO_PKG_BUILD_PKG:=$(GO_PKG)
+
+GO_PKG_LDFLAGS:=-s -w
+
+include $(INCLUDE_DIR)/package.mk
+include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
+
+define Package/geoview
+  TITLE:=A geofile toolkit
+  URL:=https://github.com/snowie2000/geoview
+  SECTION:=net
+  CATEGORY:=Network
+  SUBMENU:=IP Addresses and Names
+  DEPENDS+= $(GO_ARCH_DEPENDS)
+endef
+
+define Package/geoview/description
+  geoview is a handy tool to extract useful information from geo* files.
+endef
+
+define Package/geoview/install
+	$(call GoPackage/Package/Install/Bin,$(PKG_INSTALL_DIR))
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/geoview $(1)/usr/bin/
+endef
+
+$(eval $(call GoBinPackage,geoview))
+$(eval $(call BuildPackage,geoview))
