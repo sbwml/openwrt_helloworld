@@ -1,6 +1,6 @@
 --- a/option/rule_action.go
 +++ b/option/rule_action.go
-@@ -323,8 +323,9 @@ func (r *RejectActionOptions) UnmarshalJ
+@@ -267,8 +267,9 @@ func (r *RejectActionOptions) UnmarshalJ
  }
  
  type RouteActionSniff struct {
@@ -14,7 +14,7 @@
  type RouteActionResolve struct {
 --- a/route/rule/rule_action.go
 +++ b/route/rule/rule_action.go
-@@ -105,8 +105,9 @@ func NewRuleAction(ctx context.Context,
+@@ -81,8 +81,9 @@ func NewRuleAction(logger logger.Context
  		return &RuleActionHijackDNS{}, nil
  	case C.RuleActionTypeSniff:
  		sniffAction := &RuleActionSniff{
